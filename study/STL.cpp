@@ -11,6 +11,7 @@ struct __list_node{
 };
 
 namespace zjh{
+
 //list迭代器--iterator
 template<class T,class Ref,class Ptr>
 struct  __list_iterator
@@ -442,7 +443,8 @@ struct __deque_iterator
 //deque双向队列，也是一个连续的线性空间不断拼接在一起的，所以迭代器很复杂
 //最后一个参数指向缓冲区大小，默认为512Byte
 template<class T,class Alloc,size_t BufSiz = 0>
-class deque{
+class deque
+{
 public:
     typedef T value_type;
     typedef value_type* pointer;
@@ -457,8 +459,12 @@ protected:
     iterator finish;
     map_pointer map;
     size_type map_size; //map中可容纳指针的数量
+    static size_type buffer_size(){ return __deque_buf_size(sizeof(T));}
+    size_type __deque_buffer_size(size_t sz){
+        return sz < 512 ? size_t(512,sz):size_t(1);
+    }
 
-//专属空间分配器
+    //专属空间分配器
     typedef simple_alloc<value_type,Alloc> data_allocator; //类型分配器
     typedef simple_alloc<pointer,Alloc> map_allocator; //指针分配器
 
@@ -566,9 +572,208 @@ public:
 
     void reserve_map_at_front(size_type nodes_to_add = 1)
     {
-
+        //如何空间不存在了，那么就要申请额外的内存空间了
+        if(nodes_to_add > start.node - map)
+            remallocate_map(nodes_to_add,true);
     }
 
+    void remallocate_map(size_type nodes_to_add,bool add_at_front)
+    {
+        size_type old_nums = finish.node - start.node + 1;
+        size_type new_nums = old_nums + nodes_to_add;
+
+        map_pointer new_start;
+        //如果大小依旧大于2倍新节点
+        if(map_size > 2 * new_nums)
+        {
+            new_start = map + (map_size - new_nums) / 2 +(add_at_front?nodes_to_add:0);
+            if(new_start < start.node)
+                copy(start.node,finish.node+1,new_start); //如果新的开始节点在当前开始节点的前方，那么将当前节点拷贝到新节点开始的地方
+            else
+                copy_backward(start.node,finish.node + 1, new_start+old_nums); //如果新的开始节点在当前爱是节点的后方，那么将当前节点从后往前进行拷贝
+        }
+        else //节点数量小于2倍新节点
+        {
+            //重新分配内存
+            size_type new_map_size = map_size + max(map_size,nodes_to_add) + 2; //更新新的节点数量为至少2倍+2
+            map_pointer new_map = map_allocator::allocate(new_map_size);
+            new_start = new_map + (new_map_size - new_nums) / 2 +  (add_at_front?add_at_front:0);
+            copy(start.node,finish.node+1,new_start);
+            map_allocator::deallocate(map,map_size); //回收之前的内存
+            map = new_map; //更新新的node
+            map_size = new_map_size; //更新新的大小
+        }
+        start.set_node(new_start); //设置新的开始节点
+        finish.set_node(new_start + old_nums - 1); //设置新的结束节点
+    }
+
+    //pop_back操作
+    void pop_back(){
+        if(finish.cur != finish.first)
+        {
+            --finish.cur;
+            destory(finish.cur);
+        }
+        else
+            pop_back_aux(); //由于最后一个缓冲区的内存不需要了，需要进行释放
+    }
+
+    void pop_back_aux()
+    {
+        deallocate_node(finish.first); //释放最后一个缓冲区
+        finish.set_node(finish.node - 1); //设置最后一个缓冲区为上一个节点
+        finish.cur = finish.last - 1; //设置当前节点为前一个节点的最后一个节点
+        destory(finish.cur); //析构当前对象，这里不需要调整cur的指针嘛？
+    }
+
+    void pop_front()
+    {
+        if(start.cur != start.last - 1)
+        {
+            destory(start.cur);//析构当前对象
+            ++start.cur;//调整指针为下一个指针
+        }
+        else
+            pop_front_aux();
+    }
+
+    void pop_front_aux(){
+        destory(start.cur); //析构当前对象
+        deallocate(start.first); //删除当前缓冲区
+        start.set_node(start.node + 1);//移动当前指针到下一个节点
+        start.cur = start.first; //设置当前节点为首节点
+    }
+    
+    /* 按照deque的设计，需要保留一个缓冲区 */
+    void clear(){
+        for(map_pointer node = start.node + 1;node < finish.node;node++)
+        {
+            //释放缓冲区中的所有节点
+            destory(*node,*node + buffer_size());
+            //释放缓冲区
+            data_allocator::deallocate(*node,buffer_size());
+        }
+
+        //此时相当于保留了2个缓冲区
+        if(start.node != finish.node)
+        {
+            //将头部缓冲区目前所有元素进行析构
+            destory(start.cur,start.last);
+            //将尾部元素全部析构
+            destory(finish.first,finish.last);
+            data_allocator::deallocate(finish.first,buffer_size());
+        }
+        else
+            destory(start.cur,finish.last); //当前只有一个缓冲区，全部节点析构
+        
+        finish = start;
+    }
+
+    //删除迭代器当前节点
+    iterator erase(iterator pos)
+    {
+        iterator next = pos;
+        ++next;
+        difference_type index = post - start; //清楚点之前的节点数量，注意-号被重载过，所有的操作都在减号里
+        if(index < (size()>>1)) //如果清除点之前的节点较少，那么此时将前面的节点往后移动
+        {
+            copy_backward(start,index,next);
+            pop_front();
+        }
+        else
+        {
+            copy(next,finish,pos); //如果后面元素较少，整体往前移动
+            pop_back();
+        }
+        return start + index;
+    }
+
+    //删除指定迭代器区间
+    iterator erase(iterator first,iterator last)
+    {
+        //删除所有迭代器
+        if(first == start && last == finish)
+        {
+            clear();
+            return finish;
+        }
+        else{
+            difference_type n = last - first; //删除节点个数
+            difference_type before_num = first - start;
+            //如果前面的数量比较少
+            if(before_num < (size() - n)/2)
+            {
+                copy_backward(start,first,last); //从删除点往前拷贝
+                iterator new_start = start + n; //标记新的起点
+                destory(start,new_start);//析构之间的节点
+                //释放之间的缓冲区
+                for(map_pointer cur = start.node;cur < new_start.node;cur++)
+                    data_allocator::deallocate(*cur,buffer_size());
+                start = new_start;
+            }
+            else
+            {
+                copy(start,last,start);
+                iterator new_finish = finish - n;
+                destory(new_finish,finish); //析构之间的节点
+                for(map_pointer cur = new_finish.node;cur<finish.node;cur++)
+                    data_allocator::deallocate(*cur,buffer_size());
+                finish = new_finish;
+            }
+            return start + before_num;
+        }
+    }
+
+    //在position处插入一个元素，其值为x
+    iterator insert(iterator position,const value_type& x)
+    {
+        //如果插入点是deque的最前端，直接push_front
+        if(position.cur == start.cur)
+        {
+            push_front(x);
+            return start;
+        }
+        else if(position.cur == finish.cur) //如果插入点是deque的最尾端，直接push_back
+        {
+            push_back(x);
+            iterator tmp = finish;
+            --tmp;
+            return tmp;
+        }
+        else
+            return insert_aux(position,x); //交给insert_aux去做
+    }
+
+    iterator insert_aux(iterator position,const value_type& x)
+    {
+        difference_type index = position - start;
+        value_type x_copy = x;
+        //前面的元素比较少
+        if(index < size() / 2)
+        {
+            push_front(front()); //将当前元素放到最前方
+            iterator front1 =  start;
+            ++front1;
+            iterator front2 = front1;
+            ++front2;
+            position = start + index;
+            iterator pos1 = position;
+            ++pos1;
+            copy(front1,pos1,front2);
+        }
+        else
+        {
+            push_back(back());
+            iterator back1 = finish;
+            --back1;
+            iterator back2 = back1;
+            --back2;
+            position = start + index;
+            copy_backward(position,back2,back1);
+        }
+        *pos = x_copy;
+        return pos;
+    }
 
     iterator begin(){return start;}
     iterator end(){return finish;}
@@ -579,6 +784,7 @@ public:
     }
 
     reference front(){return *start;} //调用迭代器的*
+
     reference back(){
         iterator tmp = finish;
         --tmp; //调用迭代器operator--
@@ -586,8 +792,69 @@ public:
     }
 
     size_type size()const {return finish - start;;}
+
     size_type max_size()const{return size_type(-1);}
+
     bool empty()const{return start == finish;}
+};
+
+//Stack 是一种配接器，是根据deque来进行实现的
+//stack无迭代器，所有元素符合先进后出的原则，只有栈顶元素才能使用，使用list也可以实现stack,stack<int,list<int>>
+template<class T,class Sequence = deque<T,T> >
+class Stack{
+friend bool operator==(const stack& x,const stack& y)
+{
+    return x.c == y.c;
+};
+friend bool operator<(const stack&,const stack&)
+{
+    return x.c < y.c;
+};
+public:
+    typedef typename Sequence::value_type value_type;
+    typedef typename Sequence::size_type size_type;
+    typedef typename Sequence::reference reference;
+    typedef typename Sequence::const_reference const_reference;
+protected:
+    Sequence c;
+public:
+    bool empty() const{return c.empty();}
+    size_type size() const{return c.size();}
+    reference top() {return c.back();}
+    const_reference top() const {return c.back();}
+    void push(const value_type& x){c.push_back(x);}
+    void pop(){c.pop_back();}
+};
+
+
+//队列queue也是一种配接器，都是通过deque来进行实现的，先进先出的结构
+//队列queue无迭代器，所有元素符合先进先出的原则，使用list也可以实现，queue<int,list<int>>
+template<class T,class Sequence = deque<T,T> >
+class queue{
+    friend bool operator==(const queue& x,const queue& y)
+    {
+        return x.c == y.c;
+    };
+    friend bool operator<(const queue& x,const queue& y)
+    {
+        return x.c < y.c;
+    };
+public:
+    typedef typename Sequence::value_type value_type;
+    typedef typename Sequence::size_type size_type;
+    typedef typename Sequence::reference reference;
+    typedef typename Sequence::const_reference const_reference;
+protected:
+    Sequence c;
+public:
+    bool empty()const {return c.empty();}
+    size_type size()const {return c.size();}
+    reference front(){return c.front();}
+    const_reference front()const{return c.front();}
+    reference back(){return c.back();}
+    const_reference back()const{return c.back();}
+    void push(const value_type& x){c.push_back(x);}
+    void pop(){c.pop_front();}
 };
 
 };
