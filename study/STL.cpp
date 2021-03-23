@@ -1,5 +1,6 @@
 #include"new.cpp"
 #include"type_traits.cpp"
+#include<vector>
 //list--链表 双向链表
 //双向链表，前驱节点和后继节点
 template<class T>
@@ -857,4 +858,177 @@ public:
     void pop(){c.pop_front();}
 };
 
+//堆Heap，优先队列的助手，并不属于容器组件 priority queue的复杂度介于queue和二叉搜索树之间，二叉堆就产生了，二叉堆就是一颗完全二叉树，除开
+//最后一层的叶子节点之外，所有的节点都是满的，所以我们能够使用数组来直接进行数据存储，如果当前节点为i，如果小于i的节点那么就位于2i，大于i的就
+//位于2i+1,其父节点就位于i/2处，此处的/是高斯符号，取其整数，通过此规则，我们就很容易生成一颗完全二叉树，这种以array表述tree的方法，我们称之隐式表达法
+
+//push_heap是将元素推入到堆中，接收2个迭代器，用来表现一个heap底部容器的头和尾，并且元素已经插入到底部容器的最尾端
+template<class RandomAccessIterator>
+inline void push_heap(RandomAccessIterator first,RandomAccessIterator last)
+{
+    __push_heap_aux(first,last,distance_type(first),value_type(first));
+};
+ 
+ template<class RandomAccessIterator,class Distance,class T>
+ void __push_heap_anx(RandomAccessIterator first,RandomAccessIterator last,Distance*,T*){
+     __push_heap(first,Distance(last-first - 1),Distance(0),T(*(last-1)));
+ };
+
+ template<class RandomAccessIterator,class Distance,class T>
+ void __push_heap(RandomAccessIterator first,Distance holeIndex,Distance topIndex,T value)
+ {
+    Distance parent = (holeIndex - 1)/2; //找到对应的父节点
+    while(holeIndex > topIndex && *(first + parent) < value)
+    {
+        //当尚未到达顶端，且父节点小于新值(于是不符合heap的次序特性)
+        //由于上述使用的是operator<，可知堆是一个大顶堆
+        *(first + holeIndex) = *(first + parent); //令洞值为父节点
+        holeIndex = parent; //更新新的洞值
+        parent = (holeIndex - 1)/2; //找到新的父节点
+    }
+
+    //最后将符合条件的洞值进行替换
+    *(first+holeIndex) = value;
+ };
+
+//pop_heap是将栈顶元素弹出，其实是将节点放到最后一个节点，然后比较上面最大的节点，空出来的洞就是最后节点填入的位置
+template<class RandomAccessIterator>
+inline void pop_heap(RandomAccessIterator first,RandomAccessIterator last)
+{
+    __pop_heap_aux(first,last,value_type(first));
+};
+
+template<class RandomAccessIterator,class T>
+void __pop_heap_aux(RandomAccessIterator first,RandomAccessIterator last,T*)
+{
+    __pop_heap(first,last-1,last-1,T(*(last-1)),distance_type(last - first));
+    //因为最好要弹出的节点都会放在最后一个节点，所以result的地址指针就是last-1
+};
+
+template<class RandomAccessIterator,class T,class Distance>
+void __pop_heap(RandomAccessIterator first,RandomAccessIterator last,RandomAccessIterator result,T value,Distance*)
+{
+    *result = *first; //要返回的对应
+    __adjust_heap(first,Distance(0),Distance(last-first),value);
+};
+
+template<class RandomAccessIterator,class T,class Distance>
+void __adjust_heap(RandomAccessIterator first,Distance holeIndex,Distance len,T value)
+{
+    Distance topIndex = holeIndex;
+    Distance secondChild = 2* topIndex + 2; //将右节点提上来
+    while(secondChild < len)
+    {
+        //比较洞节点的左右2个子值，然后用secondChild代表较大子节点
+        if(*(first + secondChild) < *(first + secondChild - 1))
+            secondChild--;
+        //令较大子值为洞值，再令洞号下移到较大子节点处
+        *(first + holeIndex) = *(first+secondChild);
+        holeIndex = secondChild;
+        secondChild = 2*(secondChild + 1);
+    }
+    //没有右子节点，只有左子节点
+    if(secondChild == len)
+    {
+        //将左子值为洞值，在令洞号下移到左子节点处
+        *(first+holeIndex) = *(first+secondChild-1);
+        holeIndex = secondChild-1;
+    }
+    //将欲调整的值填入到当前的洞号
+    __push_heap(first,holeIndex,topIndex,value);
+    //*(first + holeIndex) = value 我感觉也行
+};
+
+//sort_heap算法，其实就是不断的调用pop_heap操作
+template<class RandomAccessIterator>
+void sort_heap(RandomAccessIterator first,RandomAccessIterator last)
+{
+    //没执行一次，最后的那个节点就是一个当前的最大值
+    while(last - first > 1)
+        pop_heap(first,last--);
+};
+
+//make_heap算法，将一段现有的数据转化为一个heap
+template<class RandomAccessIterator>
+inline void make_heap(RandomAccessIterator first,RandomAccessIterator last)
+{
+    __make_heap(first,last,value_type(first),distance_type(first));
+};
+
+//以下make_heap不允许指定"大小比较标准"
+template<class RandomAccessIterator,class T,class Distance>
+void __make_heap(RandomAccessIterator first,RandomAccessIterator last,T*,Distance*)
+{
+    if((last - first) < 2)return;
+    Distance len = last - first;
+    //找出第一个需要重排的子树头部，以parent标示出，由于任何叶节点都不需要执行
+    Distance holeIndex = (len - 2)/2;
+    while(true){
+        //这里面是跟后面的值进行比较
+        __adjust_heap(first,holeIndex,len,T(*(first+holeIndex)));
+        if(holeIndex == 0) return;
+        holeIndex--;
+    }
+};
+
+//优先队列 priority_queue
+//是一种带权值观念的队列，允许底部增加元素，顶部移除元素，权值最高者越排在前面
+//priority_queue完全由底部容器实现的
+
+template<class T,class Sequence = std::vector<T>,class Compare = std::less<Sequence::value_type> >
+class priority_queue{
+public:
+    typedef typename Sequence::value_type value_type;
+    typedef typename Sequence::size_type size_type;
+    typedef typename Sequence::reference reference;
+    typedef typename Sequnence::const_reference const_reference;
+protected:
+    Sequence c;
+    Compare comp;
+public:
+    priority_queue():c(){};
+    explicit priority_queue(const Compare& x):c(),comp(x){};
+
+    template<class InputIterator>
+    priority_queue(InputIterator first,InputIterator last,const Compare& x):c(first,last),comp(x){
+        make_heap(c.begin(),c.end(),comp);
+    };
+
+    template<class InputIterator>
+    priority_queue(InputIterator first,InputIterator last):c(first,last){
+        make_heap(c.begin(),c.end(),comp);
+    }
+
+    bool empty()const { return c.empty();}
+    size_type size()const{return c.size();}
+    const_reference top()const{return c.front();}
+    void push(const value_type& x)
+    {
+        try
+        {
+            c.push_back(x);
+            push_heap(c.begin().c.end(),comp);
+        }
+        catch(const std::exception& e)
+        {
+            c.clear();
+        }
+    }
+
+    void pop(){
+        try
+        {
+            pop_heap(c.begin(),c.end(),comp);
+            c.pop_back();
+        }
+        catch(const std::exception& e)
+        {
+            c.clear();
+        }
+    }
+
+    //优先队列是没有迭代器的，因为它在不断的刷新头节点，所以可以通过不断的遍历进行更新
+};
+
+//双向链表slist list和slist的区别，list是个(ForwardIterator)单向迭代器，slist是一个双向迭代器(BidirectorIterator)
 };
