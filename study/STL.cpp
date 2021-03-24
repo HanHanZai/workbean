@@ -1,6 +1,8 @@
 #include"new.cpp"
 #include"type_traits.cpp"
 #include<vector>
+#include<algorithm>
+#include<functional>
 //list--链表 双向链表
 //双向链表，前驱节点和后继节点
 template<class T>
@@ -975,7 +977,7 @@ void __make_heap(RandomAccessIterator first,RandomAccessIterator last,T*,Distanc
 //是一种带权值观念的队列，允许底部增加元素，顶部移除元素，权值最高者越排在前面
 //priority_queue完全由底部容器实现的
 
-template<class T,class Sequence = std::vector<T>,class Compare = std::less<Sequence::value_type> >
+template<class T,class Sequence = std::vector<T>,class Compare = std::less<typename Sequence::value_type> >
 class priority_queue{
 public:
     typedef typename Sequence::value_type value_type;
@@ -995,13 +997,15 @@ public:
     };
 
     template<class InputIterator>
-    priority_queue(InputIterator first,InputIterator last):c(first,last){
+    priority_queue(InputIterator first,InputIterator last):c(first,last)
+    {
         make_heap(c.begin(),c.end(),comp);
-    }
+    };
 
-    bool empty()const { return c.empty();}
-    size_type size()const{return c.size();}
-    const_reference top()const{return c.front();}
+    bool empty() const { return c.empty();}
+    size_type size() const {return c.size();}
+    const_reference top()const {return c.front();}
+
     void push(const value_type& x)
     {
         try
@@ -1015,7 +1019,8 @@ public:
         }
     }
 
-    void pop(){
+    void pop()
+    {
         try
         {
             pop_heap(c.begin(),c.end(),comp);
@@ -1025,10 +1030,171 @@ public:
         {
             c.clear();
         }
-    }
+    };
 
     //优先队列是没有迭代器的，因为它在不断的刷新头节点，所以可以通过不断的遍历进行更新
 };
 
 //双向链表slist list和slist的区别，list是个(ForwardIterator)单向迭代器，slist是一个双向迭代器(BidirectorIterator)
+//slit 和 list共同具有的一个相同的特色是，他们的插入，移除，结合等操作并不会造成迭代器失效，所谓的迭代器失效是++是否还能正确执行
+//除了slist起点处附近的区域之外，在其他地方采用insert或erase操作函数，都属于不智之举，这就是slist较于list的最大缺点，所以slist特别提供了insert_after()和erase_after()
+//slist只提供了push_front,因此元素次序会和插入进来的次序相反
+
+//slist的节点
+struct __slist_node_base
+{
+    __slist_node_base* next;
+};
+
+//单向链表的节点结构
+template<class T>
+struct __slist_node:public __slist_node_base
+{
+    T data;
+};
+
+//全局函数，已知某个节点，插入新节点于其后
+inline __slist_node_base* __slist_make_link(__slist_node_base* prev_node,__slist_node_base* next_node)
+{
+    next_node->next = prev_node->next;
+    prev_node->next = next_node;
+    return next_node;
+};
+
+//全局函数，单向链表的大小(整体元素个数)
+inline size_t __slist_size(__slist_node_base* node){
+    size_t result = 0;
+    for(;node!=0;node = node->next)
+        ++result;
+    return result;
+};
+
+//slist的迭代器
+struct  __slist_iterator_base
+{
+    typedef size_t size_Type;
+    typedef ptrdiff_t diffenrence_type;
+    typedef forward_iterator_tag iterator_category; //这里是个单向的
+    __slist_node_base* node;
+    __slist_iterator_base(__slist_node_base* x):node(x){}
+    void incr(){node = node->next;}
+
+    bool operator==(const __slist_iterator_base& x)const
+    {
+        return node == x.node;
+    }
+
+    bool operator!=(const __slist_iterator_base& x)const
+    {
+        return node != x.node;
+    }
+};
+
+//单向链表的迭代器结构
+template<class T,class Ref,class Ptr>
+struct __slist_iterator:public __slist_iterator_base
+{
+    typedef __slist_iterator<T,T&,T*> iterator;
+    typedef __slist_iterator<T,const T&,const T*> const_iterator;
+    typedef __slist_iterator<T,Ref,Ptr> self;
+
+    typedef T value_type;
+    typedef Ptr pointer;
+    typedef Ref reference;
+    typedef __list_node<T> list_node;
+
+    //调用slist<T>::end()时会调用下面的函数
+    __slist_iterator(list_node* x):__slist_iterator_base(x){};
+    __slist_iterator():__slist_iterator_base(0){};
+    __slist_iterator(const iterator& x):__slist_iterator_base(x.node){};
+
+    reference operator*()const{return ((list_node*)node)->data;};
+    pointer operator->()const{return &(operator*());};
+
+    self operator++(){
+        incr();
+        return *this;
+    };
+
+    self operator++(int){
+        self tmp = *this;
+        incr();
+        return tmp;
+    };
+
+    //因为是单向迭代器，所以没有--
+    //由于没有重载==符号，所以就根据父类中的重载符号而定
+};
+
+//slist的数据结构
+template<class T,class Alloc>
+class slist
+{
+public:
+    typedef T value_type;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
+    typedef size_t size_type;
+    typedef ptrdiff_t difference_type;
+
+    typedef __slist_iterator<T,T&,T*> iterator;
+    typedef __slist_iterator<T,const T&,const T*> const_iterator;
+private:
+    typedef __slist_node<T> list_node;
+    typedef __slist_node_base list_node_base;
+    typedef __slist_iterator_base iterator_base;
+    typedef simple_alloc<list_node,Alloc> list_node_allocator;
+
+    static list_node* create_node(const value_type& x)
+    {
+        list_node* node = list_node_allocator::allocate();//配置空间
+        construct(&node->data,x);
+        node->next = 0;
+        return node;
+    }
+
+    static void destory_node(list_node* node)
+    {
+        destory(&node->data); //析构元素
+        list_node_allocator::deallocate(node); //释放空间
+    }
+
+private:
+    list_node_base head;
+
+public:
+    slist(){head.next = 0;}
+    ~slist(){clear();}
+
+    iterator begin(){return iterator((list_node*)head.next);}
+    iterator end(){return iterator(0);}
+    size_type size(){return __slist_size(head.next)};
+    bool empty(){return head.next == 0;}
+
+    void swap(slist& x)
+    {
+        list_node_base* tmp = x.head.next;
+        x.head.next = head.next;
+        head.next = tmp;
+    }
+
+    reference front(){return ((list_node*)head.next)->data;}
+
+    //从头部插入一个节点
+    void push_front(const value_type& x)
+    {
+        __slist_make_link(&head,create_node(x));
+    }
+
+    //从头部取走元素
+    void pop_front()
+    {
+        list_node_base* node = head.next;
+        head.next = head.next->next;
+        destory_node(node);
+    }
+};
+
 };
