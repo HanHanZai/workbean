@@ -1239,7 +1239,52 @@ public:
 //1.S为黑色，X是外侧插入，此时对P，G进行一次单旋转，然后再更改P，G颜色，即可重新满足红黑树的规则3，但是红黑树可能会出现不平衡的情况，不过RB-tree没有AVI树严格，所以不在意，效率也差不太多
 //2.S为黑色，X是内测插入，此时对P，X进行一次单旋转，然后更改G，X颜色，然后对G再进行一次旋转，此时就能满足条件
 //3.S为红色，X是外侧插入，此时对P，G进行一次单旋转，更改X的颜色，如果GG为黑色，一切搞定，如果GG为红色，那么问题就大一些见状况4
-//4.
+//4.S为红色，X是外侧插入，先对P，G进行一次单旋转，改变X的颜色，如果GG为红色，继续往上旋转调整颜色，直到父子连续不为红
 
-//244
+//为了避免状况4，父子节点皆为红色的情况持续往上发展，而导致时效上有瓶颈，假设新增节点为A，那么就沿着A的路径，只要看到有某节点X
+//的两个子节点皆为红色，就把X改成红色，并且将两个子节点改成黑色
+//但是如果A的父节点P亦为红色，就得像状况1一样做一次单旋转并改变颜色，活着像状况2一样做一次双旋转并改变颜色
+
+//RB-tree的节点设计
+//为了有更大的弹性，节点分为两层，
+
+typedef bool __rb_tree_color_type;
+const __rb_tree_color_type __rb_tree_red = false;//红色为0
+const __rb_tree_color_type __rb_tree_black = true; //黑色为1
+
+struct __rb_tree_node_base
+{
+    //节点颜色
+    typedef __rb_tree_color_type color_type;
+    //节点指针
+    typedef __rb_tree_node_base* base_ptr;
+
+    color_type color;//节点颜色
+    base_ptr parent;//节点的许多操作都和父节点有关系
+    base_ptr left;//左子节点
+    base_ptr right;//右子节点
+    static base_ptr minium(base_ptr ptr)
+    {
+        while(ptr->left) ptr = ptr->left;
+        return ptr;
+    }
+
+    static base_ptr maximum(base_ptr ptr)
+    {
+        while(ptr->right)ptr = ptr->right;
+        return ptr;
+    }
+};
+
+template<class Value>
+struct __rb_tree_node:public __rb_tree_node_base
+{
+    typedef __rb_tree_node<Value>* link_type;
+    Value value_field; //节点值
+};
+
+//RB-tree的迭代器
+//考虑一个迭代器，要考虑类别，++，--，&，*
+
+//252
 };
