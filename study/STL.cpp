@@ -1285,6 +1285,99 @@ struct __rb_tree_node:public __rb_tree_node_base
 
 //RB-tree的迭代器
 //考虑一个迭代器，要考虑类别，++，--，&，*
+//分为2个部分，一部分为基层迭代器，另一层为是实际的迭代器
+//基层迭代器
+struct __rb_tree_base_iterator
+{
+    typedef __rb_tree_node_base::base_ptr base_ptr;
+    typedef bidirectional_iterator_tag iterator_category;
+    typedef ptrdiff_t difference_type;
+    base_ptr node; //它用来与容器之间产生一个连结关系
+    //以下实现其实可实现于operator++内，因为再无他处会调用此函数了
+    void increment()
+    {
+        //如果有右节点，就向右走，然后一直往左子树走到底即为解答
+        if (node->right != 0)
+        {
+            node = node->right;
+            while(node->left!=0)
+                node = node->left;
+        }
+        else
+        {
+            base_ptr y = node->parent;
+            //如果没有右节点，如果现行节点本身就是个右子节点，就一直上溯，直到不为右子节点为止
+            while(node == y->right)
+            {
+                node = y;
+                y = y->parent;
+            }
+            //若此时的右子节点不等于此时的父节点，此时的父节点即为答案，否则此时的node为解答
+            if(node->right!=y)
+                node = y;
+        }
+    }
 
-//252
+    //以下实现其实可实现于operator--内，因为再无他处会调用此函数了
+    void decrease()
+    {
+        //如果节点为红色，父亲节点的父节点是自己，右子节点即为解答
+        //以上情况发生在当前节点为header，header之右子节点即为mostright，指向整棵树的max节点
+        if (node->color == __rb_tree_red && node->parent->parent == node)
+            node = node->parent;
+        else if(node->left != 0)
+        {
+            //如果有左子节点，令y为左子节点
+            base_ptr y = node->left;
+            //当y有右子节点，一直往右子节点走到底即为答案
+            while(y->right!=0)
+                y = y->right;
+            node = y;
+        }
+        else
+        {
+            //非根节点，也不存在左子节点，找出父节点，当现行节点身为左子节点，一直交替往上走，直到现行节点不为左子节点
+            base_ptr y = node->parent;
+            while(node == y->left)
+            {
+                node = y;
+                y = y->parent;
+            }
+            node = y;
+        }
+    };
+};
+
+//RB-tree正式的迭代器
+template<class Value,class Ref,class Ptr>
+struct __rb_tree_iterator:public __rb_tree_base_iterator
+{
+    typedef Value value_type;
+    typedef Ref reference;
+    typedef Ptr pointer;
+    typedef __rb_tree_iterator<Value,Value&,Value*> iterator;
+    typedef __rb_tree_iterator<Value,const Value&,const Value*> const_iterator;
+    typedef __rb_tree_iterator<Value,Ref,Ptr> self;
+    typedef __rb_tree_node<Value>* link_type;
+    __rb_tree_iterator(){};
+    __rb_tree_iterator(link_type x){node = x;};
+    __rb_tree_iterator(const iterator& x){node = x.node;};
+    //获取当前节点值
+    reference operator*()const{return link_type(node)->value_field;}
+    pointer operator->()const{return &(operator*());};
+    self& operator++(){increment();return *this;}
+    self operator++(int){
+        self tmp = *this;
+        increment();
+        return tmp;
+    }
+
+    self& operator--(){decrease();return *this;}
+    self operator--(int){
+        self tmp = *this;
+        decrease();
+        return tmp;
+    }
+};
+
 };
