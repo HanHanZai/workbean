@@ -1263,7 +1263,7 @@ struct __rb_tree_node_base
     base_ptr parent;//节点的许多操作都和父节点有关系
     base_ptr left;//左子节点
     base_ptr right;//右子节点
-    static base_ptr minium(base_ptr ptr)
+    static base_ptr minimum(base_ptr ptr)
     {
         while(ptr->left) ptr = ptr->left;
         return ptr;
@@ -1379,5 +1379,274 @@ struct __rb_tree_iterator:public __rb_tree_base_iterator
         return tmp;
     }
 };
+
+//RB-tree的数据结构
+template<class Key,class Value,class KeyOfValue,class Compare,class Alloc>
+class rb_tree{
+protected:
+    typedef void* void_pointer;
+    typedef __rb_tree_node_base* base_ptr;
+    typedef __rb_tree_node<Value> rb_tree_node;
+    typedef simple_alloc<rb_tree_node,Alloc> rb_tree_allocator;
+    typedef __rb_tree_color_type color_type;
+public:
+    typedef Key key_type;
+    typedef Value value_type;
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
+    typedef rb_tree_node* link_type;
+    typedef size_t size_type;
+    typedef ptrdiff_t difference_type;
+protected:
+    //创建一个node的空间
+    link_type get_node(){return rb_tree_allocator::allocate();}
+    //释放一个node的空间
+    void put_node(link_type p) {rb_tree_allocator::deallocate(p);}
+
+    //创建一个节点，进行构造
+    link_type create_node(const value_type& x){
+        link_type tmp = get_node();
+        construct(&tmp->value_field,x);
+        return tmp;
+    }
+
+    //深拷贝一个节点
+    link_type clone_node(link_type x){
+        link_type  tmp = create_node(x);
+        tmp->color = x->color;
+        tmp->left = 0;
+        tmp->right = 0;
+
+        return tmp;
+    }
+
+    //销毁一个节点
+    void destory_node(link_type p)
+    {
+        destory(&p->value_field);//析构
+        put_node(p);
+    }
+
+protected:
+    //RB-tree只用三笔数据进行记录
+    size_type node_count;
+    link_type header;
+    Compare key_compare;
+
+    //以下三个函数方便取得header的成员
+    link_type root()const {return (link_type&)header->parent;}
+    link_type leftmost()const{return (link_type&)header->left;}
+    link_type rightmost()const{return (link_type&)header->right;}
+
+    //以下六个函数用来方便取得节点x的成员
+    //获取当前对象的左子节点
+    static link_type& left(link_type x)
+    {
+        return (link_type&)(x->left);
+    }
+
+    //获取当前对象的右子节点
+    static link_type& right(link_type x)
+    {
+        return (link_type&)(x->right);
+    }
+
+    //获取当前对象的父节点
+    static link_type& parent(link_type x)
+    {
+        return (link_type&)(x->parent);
+    }
+
+    //获取当前对象的值
+    static reference value(link_type x)
+    {
+        return x->value_field;
+    }
+
+    //获取当前对象的key值
+    static const Key& key(link_type x)
+    {
+        return KeyOfValue()(value(x));
+    }
+
+    //获取按当前对象的颜色
+    static color_type& color(link_type x)
+    {
+        return (color_type&)(x->color);
+    }
+
+    //以下六个函数用来方便取得节点x的成员
+    static link_type& left(base_ptr& x)
+    {
+        return (link_type&)(x->left);
+    }
+
+    static link_type& right(base_ptr& x)
+    {
+        return (link_type&)(x->right);
+    }
+
+    static link_type& parent(base_ptr& x)
+    {
+        return (link_type&)(x->parent);
+    }
+
+    static reference value(base_ptr& x)
+    {
+        return ((link_type)x)->value_field;
+    }
+
+    static color_type& color(base_ptr& x)
+    {
+        return (color_type&)(link_type(x)->color);
+    } 
+
+    static link_type minimum(link_type x)
+    {
+        return (link_type) __rb_tree_node_base::minimum(x);
+    }
+
+    static link_type maximum(link_type x)
+    {
+        return (link_type) __rb_tree_node_base::maximum(x);
+    }
+
+public:
+    typedef __rb_tree_iterator<value_type,reference,pointer> iterator;
+private:
+    iterator __insert(base_ptr x,base_ptr y,const value_type& v);
+    link_type __copy(link_type x,link_type p);
+    void __erase(link_type x);
+    void init(){
+        header = get_node(); //产生一个节点空间，令header指向它
+        color(header) = __rb_tree_red; //设置头节点颜色为红色
+        root() = 0; //设置根节点为空
+        leftmost() = header; //设置最左子节点为自己本身
+        rightmost() = header; //设置最右子节点为自己本身
+    }
+public:
+    rb_tree(const Compare& comp = Compare()):node_count(0),key_compare(comp)
+    {
+        init();
+    }
+
+    ~rb_tree()
+    {
+        clear();
+        put_node(header);
+    }
+
+    rb_tree<Key,Value,KeyOfValue,Compare,Alloc>& operator=(const rb_tree<Key,Value,KeyOfValue,Compare,Alloc>& x);
+
+    Compare key_comp()const{return key_compare;}
+    
+    iterator begin(){return leftmost();}
+
+    iterator end(){return header;}
+
+    bool empty(){return node_count == 0;}
+
+    size_type size(){return node_count;}
+    size_type max_size()const{return size_type(-1);}
+
+public:
+    //将x插入到RB-Tree中(保证插入的节点是独一无二的)
+    std::pair<iterator,bool> insert_unique(const value_type& x);
+    //将x插入都RB-Tree中，允许节点重复值
+    iterator insert_equal(const value_type& x);
+};
+
+//RB-tree的构造与内存管理
+//使用init初始化的时候，将初始化一个空的header，左右都指向自己，父节点为空
+//插入节点的时候，更新对应的左右节点
+
+//RB-tree的元素操作，主要是插入和搜索
+//重复插入
+template<class Key,class Value,class KeyOfValue,class Compare,class Alloc>
+typename rb_tree<Key,Value,KeyOfValue,Compare,Alloc>::iterator
+rb_tree<Key,Value,KeyOfValue,Compare,Alloc>::insert_equal(const Value& v)
+{
+    link_type y = header;
+    link_type x = root(); //从根节点开始
+    while(x!=0){
+        y = x;
+        x = key_compare(KeyOfValue()(v),key(x))?left(x):right(x);
+    }
+    return __insert(x,y,v);
+};
+
+//唯一插入
+template<class Key,class Value,class KeyOfValue,class Compare,class Alloc>
+std::pair<typename rb_tree<Key,Value,KeyOfValue,Compare,Alloc>::iterator,bool>
+rb_tree<Key,Value,KeyOfValue,Compare,Alloc>::insert_unique(const Value& v)
+{
+    link_type y = parent;
+    link_type x = root(); //从根节点开始
+    bool comp = true;
+    while(x!=0)
+    {
+        y = x;
+        comp = key_compare(KeyOfValue()(v),key(x));
+        x = comp?left(x):right(x);
+    }
+
+    //j是x的父节点
+    iterator j = iterator(y);
+    if(comp)
+    {
+        //如果插入的节点是最左节点
+        if (j == begin())
+            return std::pair<iterator,bool>(__insert(x,y,v),true); //x是当前要插入的节点位置，y是当前节点的父节点，v是要插入的值
+        else
+            --j; //否则 调整j，准备后续测试，这里是作甚？
+    }
+    
+    //小于新值，插入到右子节点
+    if (key_compare(key(j.node),KeyOfValue()(v)))
+        return std::pair<iterator,bool>(__insert(x,y,v),true);
+    
+    //到此为止，如果还没插入，说明已经存在重复的值了
+    return std::pair<iterator,bool>(__insert(x,y,v),false);
+};
+
+//真正的插入函数
+template<class Key,class Value,class KeyOfValue,class Compare,class Alloc>
+typename rb_tree<Key,Value,KeyOfValue,Compare,Alloc>::iterator 
+rb_tree<Key,Value,KeyOfValue,Compare,Alloc>::__insert(base_ptr x_,base_ptr y_,const value_type& v)
+{
+    //x是插入点，y是插入点的父节点，参数v是新值
+    link_type x = (link_type)__x;
+    link_type y = (link_type)__y;
+    link_type z;
+    //key_compare是个比较函数
+    //y是头节点，x不为空，v的值小于y的值
+    if(y == header || x!=0 || key_compare(KeyOfValue()(v),key(y)))
+    {
+        z = create_node();
+        left(y) = z; //当y为header时，leftmost就是z
+        if(y == header)
+        {
+            root() = z; //当y是头节点时，此时令z为根节点
+            leftmost() = z;
+        }
+    }
+    else{
+        z = create_node();
+        right(y) = z;
+        if(y == rightmost())
+            rightmost() = z;
+    }
+
+    parent(z) = y; //设置新节点为父节点
+    left(z) = 0 ;//设置新节点的左子节点
+    right(z) = 0 ;//设置新节点的右子节点
+
+    __rb_tree_rebalance(z,header->parent); //参数1为新增节点，参数2为根节点
+    ++node_count;
+    return iterator(z);
+};
+//258
 
 };
