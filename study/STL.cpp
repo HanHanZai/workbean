@@ -1294,6 +1294,7 @@ struct __rb_tree_base_iterator
     typedef ptrdiff_t difference_type;
     base_ptr node; //它用来与容器之间产生一个连结关系
     //以下实现其实可实现于operator++内，因为再无他处会调用此函数了
+    //increment直接找到比自己大一点的哪个节点
     void increment()
     {
         //如果有右节点，就向右走，然后一直往左子树走到底即为解答
@@ -1312,7 +1313,7 @@ struct __rb_tree_base_iterator
                 node = y;
                 y = y->parent;
             }
-            //若此时的右子节点不等于此时的父节点，此时的父节点即为答案，否则此时的node为解答
+            //若此时的右子节点不等于此时的父节点，此时的父节点即为答案，否则此时的node为解答，这里是处理极端情况的
             if(node->right!=y)
                 node = y;
         }
@@ -1556,6 +1557,7 @@ public:
     std::pair<iterator,bool> insert_unique(const value_type& x);
     //将x插入都RB-Tree中，允许节点重复值
     iterator insert_equal(const value_type& x);
+    iterator find(const Key& k);
 };
 
 //RB-tree的构造与内存管理
@@ -1582,18 +1584,19 @@ template<class Key,class Value,class KeyOfValue,class Compare,class Alloc>
 std::pair<typename rb_tree<Key,Value,KeyOfValue,Compare,Alloc>::iterator,bool>
 rb_tree<Key,Value,KeyOfValue,Compare,Alloc>::insert_unique(const Value& v)
 {
-    link_type y = parent;
+    link_type y = header;
     link_type x = root(); //从根节点开始
     bool comp = true;
     while(x!=0)
     {
         y = x;
-        comp = key_compare(KeyOfValue()(v),key(x));
+        comp = key_compare(KeyOfValue()(v),key(x)); //v小于x
         x = comp?left(x):right(x);
     }
 
     //j是x的父节点
     iterator j = iterator(y);
+    //如果离开while之后，comp为true，说明要插入到节点的左边
     if(comp)
     {
         //如果插入的节点是最左节点
@@ -1647,6 +1650,165 @@ rb_tree<Key,Value,KeyOfValue,Compare,Alloc>::__insert(base_ptr x_,base_ptr y_,co
     ++node_count;
     return iterator(z);
 };
-//258
+
+//左旋转
+inline void 
+__rb_tree_rotate_left(__rb_tree_node_base* x,__rb_tree_node_base*& root)
+{
+    //x为旋转点
+    //令y为x的右子节点
+    __rb_tree_node_base* y = x->right;
+    x->right = y->left;
+    if(y->left!=0)
+        y->left->parent = x; //调整父节点为x
+    y->parent = x->parent;//更新y的父节点
+
+    //令y完全替代x的地位，把x父节点的所有相关信息进行继承
+    if(x == root)
+        root = y;
+    else if(x == x->parent->left)
+        x->parent->left = y;
+    else
+        x->parent->right = y;
+    
+    y->left = x;
+    x->parent = y;
+};
+
+inline void 
+__rb_tree_rotate_right(__rb_tree_node_base* x,__rb_tree_node_base*& root)
+{
+    //x为旋转点
+    //令y为x的左子节点
+    __rb_tree_node_base* y = x->left;
+    x->left = y->right; //更新x的左子节点为y的右子节点
+    if(y->right != 0)
+        y->right->parent = x; //回马枪设置一下
+    y->parent = x->parent;
+
+    if(x == root)
+        root = y;
+    else if(x == x->parent->left)
+        x->parent->left = y;
+    else 
+        x->parent->right = y;
+    
+    y->right = x;
+    x->parent = y;
+};
+
+//节点旋转调整
+inline void 
+__rb_tree_rebalance(__rb_tree_node_base* x,__rb_tree_node_base*& root)
+{
+    //被插入的节点一定是红色的
+    x->color = __rb_tree_red;
+    //父节点为红
+    while(x!=root && x->parent->color == __rb_tree_red)
+    {
+        //如果父节点是祖父节点的左子节点
+        if(x->parent == x->parent->parent->left)
+        {
+            //令y是祖父节点
+            __rb_tree_node_base* y = x->parent->parent->right;
+            //伯父是红色节点
+            if(y && y->color == __rb_tree_red)
+            {
+                //修改父节点为黑色
+                x->parent->color = __rb_tree_black;
+                //修改伯父节点为黑色
+                y->color = __rb_tree_black;
+                //修改祖父节点为红色
+                x->parent->parent->color = __rb_tree_red;
+                //准备回溯
+                x = x->parent->parent;
+            }
+            else //无伯父节点，或者伯父节点为黑色
+            {
+                //如果新节点是父节点的右子节点
+                if (x == x->parent->right)
+                {
+                    x = x->parent;
+                    __rb_tree_rotate_left(x,root); //第一参数为左旋点
+                }
+                //修改父节点为黑色
+                x->parent->color = __rb_tree_black;
+                //修改祖父节点为红色
+                x->parent->parent->color = __rb_tree_red;
+                __rb_tree_rotate_right(x,root);
+            }
+        }
+        else //父节点为祖父节点的右子节点
+        {
+            //y是伯父节点
+            __rb_tree_node_base* y = x->parent->parent->left;
+            //伯父节点是红色
+            if(y && y->color == __rb_tree_red)
+            {
+                //更改父节点颜色为黑色
+                x->parent->color = __rb_tree_black;
+                //更改伯父节点颜色为黑色
+                y->color = __rb_tree_black;
+                //修改祖父节点颜色为红色
+                x->parent->parent->color = __rb_tree_red;
+                x = x->parent->parent;
+            } 
+            else //无伯父节点，或者伯父节点为黑色
+            {
+                //如果节点为父节点的左子节点
+                if(x == x->parent->left)
+                {
+                    x = x->parent;
+                    __rb_tree_rotate_right(x,root);
+                }
+                //修改父节点的颜色为黑色
+                x->parent->color = __rb_tree_black;
+                //修改祖父节点的颜色为红色
+                x->parent->parent->color = __rb_tree_red;
+                __rb_tree_rotate_left(x,root);
+            }
+        }
+    }
+    root->color = __rb_tree_black; //根节点永远为黑色
+};
+
+//元素的查询
+template<class Key,class Value,class KeyOfValue,class Compare,class Alloc>
+typename rb_tree<Key,Value,KeyOfValue,Compare,Alloc>::iterator 
+rb_tree<Key,Value,KeyOfValue,Compare,Alloc>::find(const Key& k){
+    link_type y = header; //最后一个不比k小的节点
+    link_type x = root(); //当前节点
+    while(x!=0){
+        if(!key_compare(Key(x),k))
+        {
+            y = x;
+            x = left(x); 
+        }
+        else
+            x = right(x);
+    }
+    iterator j = iterator(y);
+    return (j == end()||key_compare(k,Key(j.node)))?end():j;
+};
+
+//set的特性，所有元素都会根据元素的键值自动被排序，set的元素不像map那样可以同时拥有实值，实值就是键值，set不允许出现两个相同的值
+//set的迭代器是一个const迭代器，不允许进行修改
+//默认降序排序
+template<class Key,class Compare,class Alloc>
+class set{
+public:
+    typedef Key key_type;
+    typedef Key value_type;
+    typedef Compare key_compare;
+    typedef Compare value_compare;
+private:
+    template<class T>
+    struct identity:public std::unary_function<T,T>
+    {
+        const T& operator()(const T& x)const {return x;}
+    };
+    typedef rb_tree<key_type,value_type,identity<value_type>,key_compare,Alloc> rep_type;
+    rep_type t;    
+};
 
 };
