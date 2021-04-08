@@ -1809,6 +1809,422 @@ private:
     };
     typedef rb_tree<key_type,value_type,identity<value_type>,key_compare,Alloc> rep_type;
     rep_type t;    
+public:
+    typedef typename ret_type::const_pointer pointer;
+    typedef typename ret_type::const_pointer const_pointer;
+    typedef typename ret_type::const_reference reference;
+    typedef typename ret_type::const_reference const_reference;
+    typedef typename ret_type::const_iterator iterator;
+    typedef typename ret_type::const_iterator const_iterator;
+    typedef typename ret_type::size_type size_type;
+    typedef typename ret_type::difference_type difference_type;
+    typedef typename ret_type::const_reserver_iterator reverse_iterator;
+    typedef typename ret_type::const_reserver_iterator const_reverse_iterator;
+    //插入的方法只有一个insert_unique,因为set不允许重复插入数据
+    set():t(Compare()){};
+    explicit set(const Compare& comp):t(comp){};
+
+    template<class InputIterator>
+    set(InputIterator first,InputIterator last):t(Compare())
+    {
+        insert(first,last);
+    }
+
+    template<class InputIterator>
+    set(InputIterator first,InputIterator last,const Compare& comp):t(comp)
+    {
+        insert(first,last);
+    }
+
+    set(const set<Key,Compare,Alloc>& x):t(x.t){};
+
+    set<Key,Compare,Alloc>& operator=(const set<Key,Compare,Alloc>& x)
+    {
+        t = x.t;
+        return *this;
+    }
+
+    //获取比较函数
+    key_compare key_comp()const {return t.key_comp();};
+    value_compare value_comp()const{return t.key_comp();};
+    iterator begin()const { return t.begin(); }
+    iterator end() const { return t.end();}
+    reverse_iterator rbegin()const {return t.rbegin();}
+    reverse_iterator rend()const {return t.rend();}
+    bool empty()const{return t.empty();}
+    size_type size()const{return t.size();}
+    size_type max_size()const{return t.max_size();}
+    void swap(set<Key,Compare,Alloc>& x){t.swap(x);};
+
+    typedef std::pair<iterator,bool> pair_iterator_bool;
+    //唯一插入
+    pair_iterator_bool insert(const value_type& x)
+    {
+        std::pair<typename rep_type::iterator,bool> p = t.insert_unique(x);
+        return pair_iterator_bool(p.first,p.second);
+    }
+
+    iterator insert(iterator position,const value_type& x)
+    {
+        typedef typename rep_type::iterator rep_iterator;
+        return t.insert_unique((rep_iterator&)position,x);
+    }
+
+    template<class InputIterator>
+    void insert(InputIterator first,InputIterator last)
+    {
+        t.insert_unique(first,last);
+    }
+
+    void erase(iterator position)
+    {
+        typedef typename rep_type::iterator rep_iterator;
+        return t.erase((rep_iterator&)position);
+    }
+
+    size_type erase(const key_type& x)
+    {
+        return t.erase(x);
+    }
+
+    void erase(iterator first,iterator last)
+    {
+        typedef typename rep_type::iterator rep_iterator;
+        t.erase((rep_iterator&)first,(rep_iterator&)last);
+    }
+
+    void clear(){t.clear();}
+
+    iterator find(const key_type& x)const{return t.find(x);};
+    size_type count(const key_type& x)const{return t.count(x);};
+    //获取第一个小于等于当前值的迭代器
+    iterator lower_bound(const key_type& x)const{
+        return t.lower_bound(x);
+    }
+
+    //获取第一个大于当前值的迭代器
+    iterator upper_bound(const key_type& x)const{
+        return t.upper_bound(x);
+    }
+
+    pair<iterator,iterator> equal_range(const key_type& x) const{
+        return t.equal_range(x);
+    }
+
+    friend bool operator==(const set&,const set&);
+    friend bool operator<(const set&,const set&);
 };
+
+template<class Key,class Compare,class Alloc>
+inline bool operator==(const set<Key,Compare,Alloc>& x,const set<Key,Compare,Alloc>& y)
+{
+    return x.t == y.t;
+};
+
+template<class Key,class Compare,class Alloc>
+inline bool operator<(const set<Key,Compare,Alloc>& x,const set<Key,Compare,Alloc>& y)
+{
+    return x.t < y.t;  
+};
+
+//map是一系列的关联值，key的值是不容被修改的，value的值才能被改变
+//map和list拥有相同的某些性质，当客户端对它进行元素增加操作或者删除操作，操作之前的所有迭代器，在操作之后都依然有效
+template<class Key,class T,class Compare,class Alloc>
+class map{
+public:
+    typedef Key key_type; //键的类型
+    typedef T data_type; //值的类型
+    typedef T mapped_type;
+    typedef std::pair<const Key,T> value_type; //元素类型(键/值)
+    typedef Compare key_compare; //键值比较函数
+    
+    //以下定义一个function，其作用就是调用元素比较函数
+    class value_compare:public std::binary_function<value_type,value_type,bool>
+    {
+        friend class map<Key,T,Compare,Alloc>;
+    protected:
+        Compare comp;
+        value_compare(Compare c):comp(c){};
+    public:
+        bool operator()(const value_type& x,const value_type& y)const{
+            return comp(x.first,y.first);
+        }    
+    }
+private:
+    typedef rb_tree<key_type,value_type,selectlst<value_type>,key_compare,Alloc> rep_type;
+    rep_type t;
+public:
+    typedef typename rep_type::pointer pointer;
+    typedef typename rep_type::const_pointer const_pointer;
+    typedef typename rep_type::reference reference;
+    typedef typename rep_type::const_referenece const_reference;
+    typedef typename rep_type::iterator iterator;
+    typedef typename rep_type::const_iterator const_iterator;
+    typedef typename rep_type::reverse_iterator reverse_iterator;
+    typedef typename rep_type::const_reverse_iterator const_reverse_iterator;
+    typedef typename rep_type::size_type size_type;
+    typedef typename rep_type::difference_type difference_type;
+
+    map():t(Compare()){};
+    explicit map(const Compare& comp):t(comp){};
+
+    template<class InputIterator>
+    map(InputIterator first,InputIterator last):t(Compare())
+    {
+        t.insert_unique(first,last);
+    }
+
+    template<class InputIterator>
+    map(InputIterator first,InputIterator last,const Compare& comp):t(comp)
+    {
+        t.insert_unique(first,last);
+    }
+
+    map(const map<Key,T,Compare,Alloc>& x):t(x.t){};
+    map<Key,T,Compare,Alloc>& operator=()(const map<Key,T,Compare,Alloc>& x)
+    {
+        t = x.t;
+        return *this;
+    }
+
+    key_compare key_comp()const{return t.key_comp();}
+    value_compare value_comp()const{return value_compare(t.key_comp());}
+    iterator begin(){return t.begin();}
+    const_iterator begin()const{return t.begin();}
+    iterator end(){return t.end();}
+    const_iterator end()const{return t.end();}
+    reverse_iterator rbegin(){return t.rbegin();}
+    const_reverse_iterator rbegin()const{return t.rbegin();}
+    reverse_iterator rend(){return t.rend();}
+    const_reverse_iterator rend()const{return t.rend();}
+    bool empty()const{return t.empty();}
+    size_type size()const{return t.size();}
+    size_type max_size()const{return t.max_size();}
+
+    T& operator[](const key_type& k)
+    {
+        //没有先插入获取值，有直接访问获取
+        //因为rb_tree插入的原则，唯一插入一个数
+        //因为这个值是通过reference传递的，所以它作为左值或右值都可以
+        return (*((insert(value_type(k,T()))).first)).second;
+    }
+
+    void swap(map<Key,T,Compare,Alloc>& x){t.swap(x.t);}
+
+    //注意以下insert操作返回的型别
+    std::pair<iterator,bool> insert(const value_type& x){
+        return t.insert_unique(x);
+    }
+
+    std::pair<iterator,bool>insert(iterator position,const value_type& x)
+    {
+        return t.insert_unique(position,x);
+    }
+
+    template<class InputIterator>
+    std::pair<iterator,bool>insert(iterator first,iterator last)
+    {
+        return t.insert_unique(first,last);
+    }
+
+    void erase(iterator position){t.erase(position);}
+
+    size_type erase(const key_type& x){return erase(x);}
+
+    void erase(iterator first,iterator last){t.erase(first,last);}
+
+    void clear(){t.clear();}
+
+    iterator find(const key_type& x){return t.find(x);}
+
+    const_iterator find(const key_type& x)const{return t.find(x);}
+
+    size_type count()const {return t.count();}
+
+    iterator lower_bound(const key_type& x){return t.lower_bound(x);}
+    const_iterator lower_bound(const key_type& x)const {return t.lower_bound(x);}
+
+    iterator upper_bound(const key_type& x){return t.upper_bound(x);}
+    const_iterator upper_bound(const key_type& x)const{return t.upper_bound(x);}
+
+    std::pair<iterator,iterator>equal_range(const key_type& x){
+        return t.equal_range(x);
+    }
+
+    std::pair<const_iterator,const_iterator>equal_range(const key_type& x)const{
+        return t.equal_range(x);
+    }
+
+    friend bool operator==(const map&,const map&);
+    friend bool operator<(const map&,const map&);
+};
+
+template<class Key,class T,class Compare,class Alloc>
+inline bool operator==(const map<Key,T,Compare,Alloc>& x,const map<Key,T,Compare,Alloc>& y)
+{
+    return x.t == y.t;
+};
+
+template<class Key,class T,class Compare,class Alloc>
+inline bool operator<(const map<Key,T,Compare,Alloc>& x,const map<Key,T,Compare,Alloc>& y)
+{
+    return x.t < y.t;
+};
+
+//multiset的特性和set完全一致，唯一的差别在于它允许键值重复，因此它从底层插入用的就是insert_equal()而非insert_unique()
+//multimap的特性和map完全一致，唯一的差别在于插入操作使用的是底层机制的insert_equal而非insert_unique
+
+//hashtable,在线性时间内操作元素
+//核心内容是散列函数，但是需要解决的是散列冲突问题，方法是线性检测，二次探测，开链等
+//线性探索 -- 负载系数，总是处于0-1之间，意指元素个数除以表格大小，除非采用开链的策略，元素的删除，实际上是对元素进行删除标记，实际
+//删除则待表格重新整理时再进行彻底删除
+//二次探索，按照H+1^2,H+2^2,H+3^2...H+i^2
+//开链表，遇到相同的映射，直接推入到链表中
+
+//hash_table的节点定义
+template<class Value>
+struct __hashtable_node
+{
+    __hashtable_node* next;
+    Value val;
+};
+
+//hashtable的迭代器
+template<class Value,class Key,class HashFun,class ExtractKey,class EqualKey,class Alloc>
+struct __hashtable_iterator
+{
+    typedef hashtable<Value,Key,HashFun,ExtractKey,EqualKey,Alloc> hashtable;
+    typedef __hashtable_iterator<Value,Key,HashFun,ExtractKey,EqualKey,Alloc> iterator;
+    typedef __hashtable_const_iterator<Value,KEy,HashFun,ExtractKey,EqualKey,Alloc> const_iterator;
+    typedef __hashtable_node<Value> node;
+
+    //从迭代器类型就可以看出来，只有前向迭代器，没有反向迭代器
+    typedef forward_iterator_tag iterator_category;
+    typedef Value value_type;
+    typedef ptrdiff_t difference_type;
+    typedef size_t size_type;
+    typedef Value& reference;
+    typedef Value* pointer;
+
+    node* cur; //迭代器当前所值节点
+    hashtable* ht; //保存容器的连结性，因为需要从bucket跳到bucket
+    __hashtable_iterator(node* n,hashtable* tab):cur(n),ht(tab){};
+    __hashtable_iterator(){};
+    reference operator*()const{return cur->val;}
+    pointer operator->()const{return &(operator*());}
+    iterator& operator++();
+    iterator operator++(int);
+    bool operator==(const iterator& it)const{return cur == it.cur;}
+    bool operator!=(const iterator& it)const{return cur != it.cur;}
+};
+template<class V,class K,class HF,class ExK,class EqK,class A>
+__hashtable_iterator<V,K,HF,ExK,EqK,A>&
+__hashtable_iterator<V,K,HF,ExK,EqK,A>::operator++()
+{
+    const node* old = cur;
+    cur = cur->next; //如果存在，就是当前值
+    //如果已经到达底部，则下一个bucket的头就是我们的目的地
+    if(!cur)
+    {
+        size_type bucket = ht->bkt_num(old->val);
+        while(!cur && ++bucket < ht->buckets.size())
+            cur = ht->buckets(bucket);
+    }
+    return *this;
+};
+
+template<class V,class K,class HF,class ExK,class EqK,class A>
+__hashtable_iterator<V,K,HF,ExK,EqK,A>
+__hashtable_iterator<V,K,HF,ExK,EqK,A>::operator++(int)
+{
+    iterator tmp = *this;
+    ++*this;
+    return tmp;
+};
+
+//hashtable的数据结构
+//模板说明：Value为节点的实际值类别，Key为键值的类别，HashFun散列函数，ExtractKey从节点取出键值的方法，EqualKey判断键值是否相同的方法，Alloc空间分配器
+template<class Value,class Key,class HashFun,class ExtractKey,class EqualKey, class Alloc>
+class hashtable{
+public:
+    typedef HashFun hasher; //哈希函数对象
+    typedef EqualKey key_equal; 
+    typedef size_t size_type;
+private:
+    hasher hash;
+    key_equal equals;
+    ExtractKey get_key;
+
+    typedef __hashtable_node<Value> node;
+    typedef simple_alloc<node,Alloc> node_allocator;
+    std::vector<node*,Alloc> buckets; //用vector保存对应的所有桶
+    size_type num_elements; //总共的桶的数量
+public:
+    size_type bucket_count()const{return buckets.size();}
+
+    //虽然开链法没有要求大小必须为质数，但是STL中仍然使用质数来设置大小
+    static const int _stl_num_primes = 28;
+    static const unsigned long __stl_prime_list[_stl_num_primes]=
+    {
+        53,97,193,389,769,1543,3097,6151,12289,24593,49157,98317,196613,393241,786433
+    };
+
+    inline unsigned long __stl_next_prime(unsigned long n)
+    {
+        const unsigned long* first = __stl_prime_list;
+        const unsigned long* last = __stl_prime_list + _stl_num_primes;
+        const unsigned long* pos = std::lower_bound(first,last,n);
+        return pos == last ?*(last-1):*pos;
+    };
+    size_type max_bucket_count()const
+    {
+        return __stl_prime_list[_stl_num_primes-1];
+    }
+
+    node* new_node(const value_type& x)
+    {
+        node* n = node_allocator::allocate();
+        n->next = 0;
+        try
+        {
+            construct(&n->val,x);
+            return n;
+        }
+        catch(const std::exception& e)
+        {
+            node_allocator::deallocate();
+        }
+    }
+
+    void delete_node(node* n)
+    {
+        destroy(&n->val);
+        node_allocator::deallocate(n);
+    }
+
+    size_type next_size(size_type n)const{return __stl_next_prime(n);}
+    
+    hashtable(size_type n,const HashFun& hf,const EqualKey& eql):hash(hf),equals(eql),get_key(ExtractKey()),num_elements(0)
+    {
+        initialize_buckets(n);
+    }
+
+    void initialize_buckets(size_type n)
+    {
+        const size_type n_buckets = next_size(n);
+        buckets.reserve(n_buckets);
+        buckets.insert(buckets.end(),n_buckets,(node*)0);
+        num_elements = 0;
+    }
+
+    std::pair<iterator,bool> insert_unique(const value_type& obj)
+    {
+        resize(num_elements + 1);//判断是否需要重建表格，如需要就扩充
+        return insert_unique_noresize(obj);
+    }
+
+    //292
+};
+
 
 };
