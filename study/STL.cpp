@@ -2223,8 +2223,61 @@ public:
         return insert_unique_noresize(obj);
     }
 
-    //292
+    void resize(size_type num_element)
+    {
+        //表格是否需要重建，是拿元素个数和bucket vector的大小来比，如果前者大于后者，就重建表格
+        //由此可知，每个bucket的最大容量和buckets vector的大小相同
+        const size_type old_n = buckets.size();
+        //确定真的需要重新配置
+        if (num_element > old_n)
+        {
+            const size_type n = next_size(num_element);//找出下一个质数
+            if(n > old_n)
+            {
+                std::vector<node*,Alloc> tmp(n,(node*)0); //重新创建新的buckets
+                for(size_type bucket = 0;bucket < old_n;++bucket)
+                {
+                    //指向节点所对应之串行的起始节点
+                    node* first = buckets[bucket];
+                    //以下处理每一个旧bucket所含的每一个节点
+                    while(first) //串行还未结束
+                    {
+                        size_type new_bucket = bkt_num(first->val,n);
+                        //以下四个操作极为微妙
+                        //调整旧节点的指向为第一个节点的下一个节点
+                        buckets[bucket] = first->next;
+                        //将当前节点插入到新的bucket中，
+                        first->next = tmp[new_bucket];
+                        tmp[new_bucket] = first;
+                        //更新指向为下一个节点
+                        first = buckets[bucket];
+                    }
+                }
+                buckets.swap(tmp); //直接交换两个列表，空间也会跟着改变
+            }
+        }
+    };
+
+    //在不需要建表的情况下插入新节点，键值不允许重复
+    std::pair<iterator,bool> insert_unique_noresize(const value_type& obj)
+    {
+        const size_type n = bkt_num(obj); //获取obj属于哪个桶
+        node* first = buckets[n]; //让first指向buckets的头部
+        //如果不为0，说明已经有数据占用，直接循环插入
+        for(node* cur = first;cur;cur = cur->next)
+        {
+            if(equals(get_key(cur->val),get_key(obj)))
+                return std::pair<iterator,bool>(iterator(cur,this),false);
+            node* tmp = new_node(obj);
+            tmp->next = first;
+            buckets[n] = tmp;
+            ++num_elements;
+            return std::pair<iterator,bool>(iterator(tmp,this),true);            
+        }
+    }
 };
+
+//293
 
 
 };
