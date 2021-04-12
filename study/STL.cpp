@@ -2387,9 +2387,265 @@ public:
             clear();
         }
     }
+
+    //从hashtable中查询和计数
+    iterator find(const key_type& key)
+    {
+        //当前在第n个桶中
+        size_type n = bkt_num_key(key);
+        node* first;
+        for(first = buckets[n];first && !equals(get_key(first->val),key);first = first->next){};
+
+        return iterator(first,this);
+    }
+
+    size_type count(const key_type& key)const
+    {
+        //获取当前属于哪个桶中
+        const size_type n = bkt_num_key(key);
+        size_type result = 0;
+        for(node* first;first;first = first->next)
+            if (equals(get_key(first->val),key))
+                result++;
+        return result;
+    }
+
+    //hash函数，在函数中会说明，主要都是用了下面这个转换函数，但是有些额外的类型和自定义类型的转换函数都需要用户自定义
+    inline size_t __stl_hash_string(const char* s)
+    {
+        unsigned long h = 0;
+        for(;*s;++s)
+            h = 5*h+*s;
+        return size_t(h);
+    };
 };
 
-//293
+//hash_set,与set的区别，一个底层是红黑树，一个底层是hashtable,set是自动排序的，hash_set不是
+template<class Value,class HashFun,class EqualKey,class Alloc>
+class hash_set
+{
+private:
+    typedef hashtable<Value,Value,HashFun,std::_Identity<Value>,EqualKey,Alloc> ht;
+    ht rep; //底层机制为hashtable
+public:
+    typedef typename ht::key_type key_type;
+    typedef typename ht::value_type value_type;
+    typedef typename ht::hasher hasher;
+    typedef typename ht::key_equal key_equal;
+    typedef typename ht::size_type size_type;
+    typedef typename ht::difference_type difference_type;
+    typedef typename ht::const_pointer pointer;
+    typedef typename ht::const_pointer const_pointer;
+    typedef typename ht::const_reference reference;
+    typedef typename ht::const_reference const_reference;
+    typedef typename ht::const_iterator iterator;
+    typedef typename ht::const_iterator const_iterator;
 
+    hasher hash_funct()const{return rep.hash_funct();}
+    key_equal key_eq()const{return rep.key_eq();}
+public:
+    hash_set():rep(100,hasher(),key_equal()){};
+    explicit hash_set(size_type n):rep(n,hasher(),key_equal()){};
+    hash_set(size_type n,const hasher& hf):rep(n,hf,key_equal()){};
+    hash_set(size_type n,const hasher& hf,const key_equal& eql):rep(n,hf,eql){};
+    //插入的操作都是唯一插入
+    template<class InputIterator>
+    hash_set(InputIterator f,InputIterator l):rep(100,hasher(),key_equal())
+    {
+        rep.insert_unique(f,l);
+    }
 
+    template<class InputIterator>
+    hash_set(InputIterator f,InputIterator l,size_type n):rep(n,hasher(),key_equal()){
+        rep.insert_unique(f,l);
+    }
+
+    template<class InputIterator>
+    hash_set(InputIterator f,InputIterator l,size_type n,const hasher& hf):rep(n,hf,key_equal())
+    {
+        rep.insert_unique(f,l);
+    }
+
+    template<class InputIterator>
+    hash_set(InputIterator f,InputIterator l,size_type n,const hasher& hf,const& key_equal& eql):rep(n,hf,eql)
+    {
+        rep.insert_unique(f,l);
+    }
+
+public:
+    size_type size()const{return rep.size();}
+    size_type max_size()const{return rep.max_size();}
+    bool empty()const{return rep.empty();}
+    void swap(hash_set& hs){rep.swap(hs.rep);}
+    friend operator==(const hash_set&.const hasn_set&);
+    iterator begin()const {return rep.begin();}
+    iterator end()const {return rep.end();}
+    std::pair<iterator,bool> insert(const value_type& obj)
+    {
+        std::pair<iterator,bool> p = rep.insert_unique(obj);
+        return std::pair<iterator,bool>(p.first,p.second);
+    }
+
+    template<class InputIterator>
+    void insert(InputIterator f,InputIterator l){rep.insert_unique(f,l);};
+    
+    std::pair<iterator,bool> insert_noresize(const value_type& obj)
+    {
+        std::pair<iterator,bool> p = rep.insert_unique_noresize(obj);
+        return std::pair<iterator,bool>(p.first,p.second);
+    }
+
+    iterator find(const key_type& key)const{return rep.find(key);}
+
+    size_type count(const key_type& key)const{return rep.count(key);}
+
+    std::pair<iterator,bool> equal_range(const key_type& key)const 
+    {
+        return rep.equal_range(key);
+    }
+
+    size_type erase(const key_type& key){return rep.erase(key);}
+    void erase(iterator it){rep.erase(it);}
+    void erase(iterator f,iterator l) { rep.erase(f,l);}
+    void clear(){ rep.clear();}
+
+    void resize(size_type& n){rep.resize(n);}
+    size_type bucket_count()const{return rep.bucket_count();}
+    size_type max_bucket_count()const{return rep.max_bucket_count();}
+
+    size_type elems_in_bucket(size_type n)const
+    {
+        return rep.elems_in_bucket(n);
+    }
+};
+
+template<class Value,class HashFun,class EqualKey,class Alloc>
+inline bool operator==(const hash_set<Value,HashFun,EqualKey,Alloc>& hsl,const hash_set<Value,HashFun,EqualKey,Alloc>& hs2)
+{
+    return hs1.rep == hs2.rep;
+};
+
+//hash_map 底层用的是hashtable，与map有很大区别，不会排序
+template<class Key,class T,class HashFunc,selectlst<std::pair<const Key,T> >,class EqualKey,class Alloc>
+class hash_map
+{
+private:
+    typedef hashtable<std::pair<const Key,T>,Key,HashFunc,selectlst<std::pair<const Key,T> >,EqualKey,Alloc> ht;
+    ht rep;
+public:
+    typedef typename ht::key_type key_type;
+    typedef T data_type;
+    typedef T mapped_type;
+    typedef typename ht::value_type value_type;
+    typedef typename ht::hasher hasher;
+    typedef typename ht::key_equal key_equal;
+    typedef typename ht::size_type size_type;
+    typedef typename ht::difference_type differece_type;
+    typedef typename ht::pointer pointer;
+    typedef typename ht::const_pointer const_pointer;
+    typedef typename ht::reference reference;
+    typedef typename ht::const_reference const_reference;
+    typedef typename ht::iterator iterator;
+    typedef typename ht::const_iterator const_iterator;
+    hasher hash_funct()const{return rep.hash_funct();}
+    key_equal key_eq()const{return rep.key_eq();}
+
+    hash_map():rep(100,HashFunc(),EqualKey()){};
+    hash_map(size_type& n):rep(n,HashFunc(),EqualKey()){};
+    hash_map(size_type& n,const hasher& hf):rep(n,hf,EqualKey()){};
+    hash_map(size_type& n,const hasher& hf,const key_equal& kel):rep(n,hf,kel){};
+
+    template<class InputIterator>
+    hash_map(InputIterator f,InputIterator l):rep(100,HashFunc(),EqualKey())
+    {
+        rep.insert_unique(f,l);
+    }
+
+    template<class InputIterator>
+    hash_map(InputIterator f,InputIterator l,size_type& n):rep(n,HashFunc(),EqualKey())
+    {
+        rep.insert_unique(f,l);
+    }
+
+    template<class InputIterator>
+    hash_map(InputIterator f,InputIterator l,size_type& n,const hasher& hf):rep(n,hf,EqualKey())
+    {
+        rep.insert_unique(f,l);
+    }
+
+    template<class InputIterator>
+    hash_map(InputIterator f,InputIterator l,size_type& n,const hasher& hf,const key_equal& eql):rep(n,hf,eql)
+    {
+        rep.insert_unique(f,l);
+    }
+
+    size_type size() const{rep.size();}
+    size_type max_size() const{rep.max_size();}
+
+    bool empty()const{return rep.empty();}
+    void swap(hash_map& hs){rep.swap(hs.rep);}
+
+    friend bool operator==(const hash_map& r,const hash_map& l)
+    {
+        return r.rep == l.rep;
+    }
+
+    iterator begin()const{rep.begin();}
+    iterator end()const{rep.end();}
+
+    const_iterator begin()const{rep.begin();}
+    const_iterator end()const{rep.end();}
+
+    std::pair<iterator,bool> insert(const value_type& obj)
+    {
+        std::pair<iterator,bool> p = rep.insert_unique(obj);
+        return std::pair<iterator,bool>(p.first,p.second);
+    }
+
+    template<class InputIterator>
+    void insert(InputIterator f,InputIterator l)
+    {
+        rep.insert(f,l);
+    }
+
+    std::pair<iterator,bool> insert_noresize(const value_type& bj)
+    {
+        return rep.insert_unique_noresize(obj);
+    }
+
+    iterator find(const key_type& key)const{return rep.find(key);}
+    const_iterator find(const key_type& key)const{return rep.find(key);}
+
+    T& operator[](const key_type& key){return rep.find_or_insert(value_type(key,T())).second;}
+
+    size_type count(const key_type& key)const{return rep.count(key);}
+
+    std::pair<iterator,iterator>equal_range(const key_type& key)
+    {
+        return rep.equal_range(key);
+    }
+
+    std::pair<const_iterator,const_iterator>equal_range(const key_type& key)
+    {
+        return rep.equal_range(key);
+    }
+
+    size_type erase(const key_type& key) {return rep.erase(key);}
+
+    void erase(iterator it){rep.erase(it);}
+
+    void erase(iterator f,iterator l){rep.erase(f,l);}
+
+    void clear(){rep.clear();}
+
+    void resize(size_type n){rep.resize(n);}
+
+    size_type bucket_count(){return rep.bucket_count();}
+    size_type max_bucket_count{return rep.max_bucket_count();}
+    size_type elems_in_bucket(size_type& n)const
+    {
+        return rep.elems_in_bucket(n);
+    }
+};
+//311
 };
