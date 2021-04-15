@@ -2647,5 +2647,172 @@ public:
         return rep.elems_in_bucket(n);
     }
 };
-//311
+
+
+//算法篇
+//算法的执行时间和其要处理的数量有关，两者之间存在某种函数关系，可能是一次，二次，三次或者对数关系
+//1.最小元素问题
+//2.最短路径问题
+//3.三点共线问题
+
+//质变算法 -- 会改变操作对象的值
+//所有的STL算法都作用在迭代器(first,last)所标示的区间上，所谓“质变算法”，是指运算过程中更改区间(迭代器所指)的元素内容
+//诸如拷贝，互换，替换，填写，删除，排列组合，分割，随机重排，排序等算法
+//非质变算法 -- 不会改变操作对象的值
+//诸如查找，匹配，记数，巡防。比较，寻找极值，但是如果在巡防的函数上加上修改值的仿函数，那么值也会被调整
+
+//质变函数通常提供2个版本，一个是in-place(就地进行)版本,另一个是copy(另地进行)版,将操作对象的内容复制一份副本，然后在副本
+//上进行修改并返回副本
+//欲使用这些算法，必须包含上层相关头文件<algoritim>
+
+//算法的泛化过程
+//一个泛化的算法，需要找出其对应的共性，在算法内部中只会用到这些共性相关的内容
+//基本算法
+//1.equal 判断序列是否相同
+//2.fill 将指定范围内填充指定的值
+//3.fill_n 将指定范围开始n个元素填充对应的元素
+//4.iter_swap 交互2个迭代器的内容
+//5.lexicographical_compare 按照字典序进行2个序列的比较
+//6.max取两个对象中的较大值
+//7.min取两个对象中的较小值
+//8.mismatch 返回一对迭代器，指向两序列中的不匹配点，返回的便是两序列各自的last迭代器，缺省情况下是以equality操作符来比较元素，第二序列的元素一定要大于第一序列的元素
+//9.swap 交换两个元素的内容
+
+//copy -- 强化效率无所不用其极
+//根据是否使用默认赋值函数来确定copy的版本
+//InputIterator版本
+template<class InputIterator,class OutPutIterator>
+inline OutPutIterator __copy(InputIterator first,InputIterator last,OutPutIterator result,input_iterator_tag)
+{
+    for(;first!=last;first++)
+        *result = *first;  //调用assignment operator
+    return result;
+};
+
+//randomIterator
+template<class RandomIterator,class OutputIterator>
+inline OutputIterator __copy(RandomIterator first,RandomIterator last,OutputIterator result,random_iterator_tag)
+{
+    return __copy_d(first,last,result,distance_type(first));
+};
+
+template<class RandomIterator,class OutputIterator,class Distance>
+inline OutputIterator __copy_d(RandomIterator first,RandomIterator last,OutputIterator result,Distance*)
+{
+    //用n来决定循环的次数
+    for(Distance n = last - first;n>0;--n,++result,++first)
+        *result = *first;
+    return result;
+};
+
+template<class T>
+inline T* __copy_t(const T* first,const T* last,T* result,__true_type)
+{
+    memmove(result,first,sizeof(T)*(last - first)); //这个开销是最小的
+    return result + (last-first);
+};
+
+template<class T>
+inline T* __copy_t(const T* first,const T* last,T* result,__false_type)
+{
+    return __copy_d(first,last,result,(ptrdiff_t*)0);
+};
+
+//copy_backward 从后往前进行拷贝，如果区间输出区间的起点与出入区间的起点有冲突，可能会出现问题
+//一旦调用的不是movement而不是copy，那么就容器出现问题
+//_type_traits一般编译器都无法识别，需要通过手动设置调整
+
+//set相关算法，并集，交集，差集，对称差集
+//set在数学上的定义为允许重复且未经排序，STL的定义，要求元素不重复，并且排过序，本算法中的set必须是有序区间，但是元素可以重复，所以接受
+//STL的set/multiset容器作为输入区间，而hash_set,hash_multiset两种容器，却不能应用在这里
+
+//本节四个算法都有4个参数，分别表现了2个set区间
+//S1代表第一区间，S2代表第二区间
+
+//set_union可构造s1和s2的并集，它能构造出集合s1 U s2，此集合内含s1或者s2内的每一个元素，S1，S2及其并集都是以排序区间表示，返回值为一个迭代器
+//指向输出区间的尾端
+//S1和S2内的元素都不唯一，如果某个值在S1中出现n次，在S2中出现m次，那么在新的容器中出现的次数为max(m,n),是一种原地稳定操作
+template<class InputIterator1, class InputIterator2,class OutputIterator>
+OutputIterator set_union(InputIterator1 first1,InputIterator1 last1,InputIterator2 first2,InputIterator2 last2,OutputIterator result)
+{
+    while(first1!=last1 && first2!=last2)
+    {
+        if (*first1 < *first2)
+        {
+            *result = *first1;
+            first1++;
+        }
+        else if(*first1 > * first2)
+        {
+            *result= *first2;
+            first2++;
+        }
+        else
+        {
+            *result = *first1;
+            first1++;
+            first2++;
+        }
+        ++result;
+    }
+    //此时两个区间中可能存在非空白区间
+    return copy(first2,last2,copy(first1,last1,result));
+}
+
+//set_intersection,可以获取s1，s2之交集，可以构造S1 n S2，获取同时出现在S1，S2中的元素
+template<class InputIterator1,class InputIterator2,class OutputIterator>
+OutputIterator set_intersection(InputIterator1 first1,InputIterator1 last1,InputIterator2 first2,InputIterator1 last2,OutputIterator result)
+{
+    while(first1!=last1 && first2 != last2)
+    {
+        if (*first1 < *first2)
+            first1++;
+        else if(*first1 > *first2)
+            first2++;
+        else
+        {
+            *result = *first1;
+            first1++;
+            first2++;
+            result++;
+        }
+    }
+    return result;
+}
+
+//set_difference,可以获取s1，s2之差集,只出现在S1不存在S2中的元素
+template<class InputIterator1,class InputIterator2,class OutputIterator>
+OutputIterator set_difference(InputIterator1 first1,InputIterator1 last1,InputIterator2 first2,InputIterator2 last2,OutputIterator result)
+{
+    //在两区间内分别移动迭代器，当前第一区间的元素等于第二区间的元素，就让两区间同时前进，当第一区间大于第二区间的元素，就让第二区间前进
+    //就保证了当第一区间的元素只存在第一区间中，不存在第二区间中，于是将它记录到目标区
+    while(first1 != last1 && first2 != last2)
+    {
+        if (*first1 < *first2)
+        {
+            *result = *first1;
+            first1++;
+            result++;
+        }
+        else if(*first1 > *first2)
+        {
+            first2++;
+        }
+        else
+        {
+            first1++;
+            first2++;
+        }
+    }
+    return copy(first1,last1,result);
+}
+
+//set_symmetric_difference 构建对称差集，出现在S1不存在S2 U 出现S2不存在S1
+template<class InputIterator1,class InputIterator2,class OutputIterator>
+OutputIterator set_symmetric_difference(InputIterator1 first1,InputIterator1 last1,InputIterator2)
+{
+
+}
+
+//369
 };
