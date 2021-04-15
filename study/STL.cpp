@@ -2809,10 +2809,51 @@ OutputIterator set_difference(InputIterator1 first1,InputIterator1 last1,InputIt
 
 //set_symmetric_difference 构建对称差集，出现在S1不存在S2 U 出现S2不存在S1
 template<class InputIterator1,class InputIterator2,class OutputIterator>
-OutputIterator set_symmetric_difference(InputIterator1 first1,InputIterator1 last1,InputIterator2)
+OutputIterator set_symmetric_difference(InputIterator1 first1,InputIterator1 last1,InputIterator2 first2,InputIterator2 last2,OutputIterator result)
 {
-
+    while(first1!=last1 && first2!=last2)
+    {
+        if (*first1 < *first2)
+        {
+            *result = *first1;
+            first1++;
+            result++;
+        }
+        else if(*first2 < *first1)
+        {
+            *result = *first2;
+            first2++;
+            result++;
+        }
+        else
+        {
+            first1++;
+            first2++;
+        }
+    }
+    return copy(first1,last1,copy(first2,last2,result));
 }
 
-//369
+//heap算法
+//建堆 make_heap();
+//入堆 push_heap();
+//出堆 pop_heap();
+//堆排序 sort_heap();
+
+//其他算法
+//adjacent_find(first,last) 寻找相邻元素之间相等的第一个元素
+//count(first,last,T)寻找T的个数
+//count_if(first,last,bind2nd(less<int>,7)) 寻找比7小的元素个数
+//find(first,last,T)寻找第一个出现T的位置
+//find_if(first,last,bind2nd(less<int>,7)) 寻找第一个比7小的位置
+//find_end(first1,last1,first2,last2)+3寻找子序列出现的最后一个位置再往后推三个位置
+//find_first_of(first1,last1,first2,last2)+3寻找子序列出现的第一个位置再往后推三个位置
+//for_each(fisrt,last,funcational) 根据函数进行遍历
+//generate(first,last,funcational) 根据函数产生对应的值
+//generate_n(first,n,funcational) 根据函数进行遍历 
+//remove 删除元素，但是有数据残留，可以通过erase函数完全去除
+//remove_copy 
+
+//373
+
 };
