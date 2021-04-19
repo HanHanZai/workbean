@@ -2811,7 +2811,7 @@ OutputIterator set_difference(InputIterator1 first1,InputIterator1 last1,InputIt
 template<class InputIterator1,class InputIterator2,class OutputIterator>
 OutputIterator set_symmetric_difference(InputIterator1 first1,InputIterator1 last1,InputIterator2 first2,InputIterator2 last2,OutputIterator result)
 {
-    while(first1!=last1 && first2!=last2)
+    while(first1 != last1 && first2 != last2)
     {
         if (*first1 < *first2)
         {
@@ -2834,24 +2834,273 @@ OutputIterator set_symmetric_difference(InputIterator1 first1,InputIterator1 las
     return copy(first1,last1,copy(first2,last2,result));
 }
 
-//heap算法
-//建堆 make_heap();
-//入堆 push_heap();
-//出堆 pop_heap();
-//堆排序 sort_heap();
+template<class ForwardIterator>
+ForwardIterator adjacent_find(ForwardIterator first,ForwardIterator last)
+{
+    if(first == last) return last;
+    ForwardIterator next = first;
+    while(++next!=last){
+        if(*first == *next) return first;
+        first = next;
+    }
+    return last;
+}
 
-//其他算法
-//adjacent_find(first,last) 寻找相邻元素之间相等的第一个元素
-//count(first,last,T)寻找T的个数
-//count_if(first,last,bind2nd(less<int>,7)) 寻找比7小的元素个数
-//find(first,last,T)寻找第一个出现T的位置
-//find_if(first,last,bind2nd(less<int>,7)) 寻找第一个比7小的位置
-//find_end(first1,last1,first2,last2)+3寻找子序列出现的最后一个位置再往后推三个位置
-//find_first_of(first1,last1,first2,last2)+3寻找子序列出现的第一个位置再往后推三个位置
-//for_each(fisrt,last,funcational) 根据函数进行遍历
-//generate(first,last,funcational) 根据函数产生对应的值
-//generate_n(first,n,funcational) 根据函数进行遍历 
-//remove 删除元素，但是有数据残留，可以通过erase函数完全去除
-//remove_copy 
+template<class ForwardIterator,class BinaryPredicate>
+ForwardIterator adjacent_find(ForwardIterator first,ForwardIterator last,BinaryPredicate binaryFunc)
+{
+    if(first == last) return last;
+    ForwardIterator next = first;
+    while(++next!=last)
+    {
+        if (binaryFunc(*first,*last))return first;
+        first = next;
+    }
+    return last;
+}
+
+template<class InputIterator,class T>
+typename iterator_traits<InputIterator>::difference_type count(InputIterator first,InputIterator last,const T& value)
+{
+    typename iterator_traits<InputIterator>::difference_type n = 0;
+    for(;first!=last;first++)
+    {
+        if (*first == value) n++;
+    }    
+    return n;
+}
+
+template<class BidirectionalIterator>
+bool next_permutation(BidirectionalIterator first,BidirectionalIterator last)
+{
+    if(first == last)return false; //空区间
+    BidirectionalIterator i = first;
+    ++i;
+    if(i == last)return false; //只包含一个元素
+    i = last;
+    --i;
+    for(;;)
+    {
+        BidirectionalIterator ii = i;
+        --i;
+        //以上锁定一组相邻元素
+        if(*i < *ii) //如果前一个元素小于后一个元素
+        {
+            BidirectionalIterator j = last; //令j指向最后一个元素
+            while(!(*i < *--j)); //从尾端开始找，找到一个比*i大的元素
+            iter_swap(i,j); //交换对应的元素
+            reverse(ii,last); //将当前点之后的元素进行重排
+            return true;
+        }
+        if(i == first) //如果进行到最前面了，全部逆向重排
+        {
+            reverse(first,last);
+            return false;
+        }
+    }
+}
+
+template<class BidirectionalIterator>
+bool prev_permutation(BidirectionalIterator first,BidirectionalIterator last)
+{
+    if(first == last) return false;//空区间
+    BidirectionalIterator i = first;
+    ++i;
+    if(i == last)return false; //只包含一个元素
+    i = last;
+    --i;
+    for(;;)
+    {
+        BidirectionalIterator ii = i;
+        --i;
+        if(*i > *ii) //如果前一个元素大于当前元素，进行交换
+        {
+            BidirectionalIterator j = last;
+            while(!(*--j < *i)); //获取第一个小于当前值的对象
+            iter_swap(i,j);
+            reverse(ii,last);
+            return true;
+        } 
+        if (i == first) //如果元素已经到头了，那么需要交换所有的元素
+        {
+            reverse(first,last);
+            return false;
+        }
+    }
+}
+
+//partial_sort/partial_sort_copy 部分排序，部分排序并复制
+//保证first-middle是升序排列，middle-last不保证任何顺序
+template<class RandomAccessIterator>
+inline void partial_sort(RandomAccessIterator first,RandomAccessIterator middle,RandomAccessIterator last)
+{
+    __partial_sort(first,middle,last,value_type(first));
+}
+
+template<class RandomAccessIterator,class T>
+inline void __partial_sort(RandomAccessIterator first,RandomAccessIterator middle,RandomAccessIterator last)
+{
+    make_heap(first,middle);
+    for(RandomAccessIterator i = middle;i<last;i++)
+    {
+        if(*i < *first)
+            __pop_heap(first,middle,i,T(*i),distance_type(first)); //这里涉及到数据交互
+    }
+    sort_heap(first,middle);
+}
+
+//partial_sort_copy逻辑和partial_sort逻辑一样，只不过最后的数据是排序完成之后的值
+
+//sort是最为复杂的一个算法，这个算法接受两个RandomAccessIterator,然后将元素从小到大进行重新排序，第二个版本允许用户传入一个仿函数作为排序标准
+//关系性容器都拥有自动排序的功能，底层为红黑树的，至于序列型容器，stack，queue，priority_queue都有特别的出入口，不允许用户对元素进行排序，适合使用
+//sort函数，剩下的都是RandomAccessIterator,也适合sort算法
+//STL中的sort算法，数据量大时采用Quick Sort，分段递归排序，一旦分段后的数据量小于某个门槛，为避免快排带来过大的额外负荷，就改用插入排序，如果递归层次
+//太深，那么就采用堆排序
+
+//插入排序 根据逆序对来进行排序，如果不存在，就说明排序成功了 i < j *i>*j,时间复杂度为O(n^2)
+template<class RandomAccessIterator>
+void __insertion_sort(RandomAccessIterator first,RandomAccessIterator last)
+{
+    if(first == last)return;
+    for(RandomAccessIterator i = first;i<last;i++)
+        __linear_insert(first,i,value_type(first)); //以上[first,i]形成一个子区间
+}
+
+template<class RandomAccessIterator,class T>
+inline void __linear_insert(RandomAccessIterator first,RandomAccessIterator last,T*)
+{
+    T value = *last; //记录尾部元素
+    if(value < *first) //头端必定为最小元素
+    {
+        //就不需要继续比较了，直接放到第一个位置
+        copy_backward(first,last,last+1);
+        *first = value;
+    }
+    else//尾部不小于头
+        __unguardea_linear_insert(last,value);
+}
+
+template<class RandomAccessIterator,class T>
+void __unguardea_linear_insert(RandomAccessIterator last,T value)
+{
+    RandomAccessIterator next = last;
+    --next;
+    while(value<*next)
+    {
+        *last = *next;
+        last = next;
+        --next;
+    }
+    *last = value;
+}
+
+//Quick Sort 快排
+//如果使用插入排序的话，O(n^2)的复杂度就令人头疼了，大数据量的情况下有许多更好的排序算法可供选择，快排的平均时间复杂度为O(nlogn),最坏为O(n^2)
+//1.如果元素的个数为0或者1个，结束
+//2.取S中任何一个元素，当作枢纽
+//3.将S分割为L，R两段，使得L内的元素都小于等于v，R内的元素都大于等于v
+//4.对L，R递归执行Quick Sort
+
+//三点中值
+template<class T>
+inline const T& _median(const T& a,const T& b,const T& c)
+{
+    if(a<b)
+    {
+        if (b<c)return b;
+        else if(a<c)return c;
+        else return a;
+    }
+    else if(a < c)
+        return a;
+    else if(b < c)
+        return c;
+    else
+        return b;
+}
+
+//分割
+template<class RandomAccessIterator,class T>
+RandomAccessIterator __unguarded_partition(RandomAccessIterator first,RandomAccessIterator last,T pivot)
+{
+    while(true)
+    {
+        while(*first < pivot) ++first;
+        --last;
+        while(*last > pivot) --last;
+        if(last < first) return first;
+        iter_swap(first,last);
+        ++first;
+    }
+}
+
+//阈值，快排和插入排序有一个中间值，超过这个值使用qsort比较快，而小于这个值，使用插入排序更快
+//由于快排可能会出现N^2的时间复杂度，所以可以通过堆排来实现nlogn
+template<class RandomAccessIterator>
+inline void sort(RandomAccessIterator first,RandomAccessIterator last)
+{
+    if(first!=last)
+    {
+        __introsort_loop(first,last,value_type(first),__lg(last-first)*2);
+        __final_insertion_sort(first,last);
+    }
+}
+
+//其中__lg用来控制分割恶化的情况
+//当元素个数为40时，那么此时最后的一个参数为5*2，意思是最多分割10层
+template<class Size>
+inline Size __lg(Size n)
+{
+    Size k; 
+    for(k = 0;n>1;n>>1)++k;
+    return k;
+}
+
+const int __stl_threshold = 16;
+template<class RandomAccessIterator,class T,class Size>
+void __introsort_loop(RandomAccessIterator first,RandomAccessIterator last,T*,Size depth_limit)
+{
+    while(last - first > __stl_threshold)
+    {
+        if(depth_limit == 0)
+        {
+            partial_sort(first,last,last); //至此，分割恶化，改用heapsort
+            return;
+        }
+
+        --depth_limit;
+        //三段式进行枢纽点的确定
+        RandomAccessIterator cut = __unguarded_partition(first,last,T(_median(*first,*(first + (first - last)/2),*(last-1))));
+        //对右半段进行排序
+        __introsort_loop(cut,last,value_type(first),depth_limit);
+        last = cut;
+        //这种可读性好差，这里改变下尾指针，使之排序左半段
+    }
+}
+
+template<class RandomAccessIterator>
+void __final_insertion_sort(RandomAccessIterator first,RandomAccessIterator last)
+{
+    if (last - first > __stl_threshold)
+    {
+        __insertion_sort(first,first + __stl_threshold);
+        __unguardea_insertion_sort(first+__stl_threshold,last);
+    }
+    else    
+        __insertion_sort(first,last);
+}
+
+template<class RandomAccessIterator>
+inline void __unguardea_insertion_sort(RandomAccessIterator first,RandomAccessIterator last)
+{
+    __unguardea_insertion_sort_aux(first,last,value_type(first));
+}
+
+template<class RandomAccessIterator,class T>
+void __unguardea_insertion_sort_aux(RandomAccessIterator first,RandomAccessIterator last,T*)
+{
+    for(RandomAccessIterator i = first;i<last;i++)
+        __unguardea_linear_insert(i,T(*i));
+}
 
 };
