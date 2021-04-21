@@ -3103,4 +3103,175 @@ void __unguardea_insertion_sort_aux(RandomAccessIterator first,RandomAccessItera
         __unguardea_linear_insert(i,T(*i));
 }
 
+template<class RandomAccessIterator>
+inline void __quick_sort_loop(RandomAccessIterator first,RandomAccessIterator last)
+{
+    __quick_sort_loop_aux(first,last,value_type(first));
+}
+
+//RW版本的sort部分
+template<class RandomAccessIterator,class T>
+inline void __quick_sort_loop_aux(RandomAccessIterator frist,RandomAccessIterator last,T*)
+{
+    while(last - frist > __stl_threshold)
+    {
+        RandomAccessIterator cut = __unguarded_partition(first,last,T(_median(*frist,*(first + (last-last)/2),*(last-1))));
+        if(cut - frist >= last - cut)
+        {
+            __quick_sort_loop(cut,last);
+            last = cut;
+        }
+        else 
+        {
+            __quick_sort_loop(first,cut);
+            first = cut;
+        }
+    }
+}
+
+//equal_range是二分查找中的一个版本，试图在已排序的区间中寻找一个value，它返回一个迭代器对i和j，i是lower_bound,j是upper_bound,[i,j]
+//中的每个元素都等同于value，是[i,j]在区间[first,last]中符合此性质的最大子区间
+//如果不满足条件，其实返回的是一个空区间，在不破坏次序的前提下，只有一个位置可以插入value，那么此时迭代器中的第一和第二元素都指向该位置。
+
+template<class ForwardIterator,class T>
+inline std::pair<ForwardIterator,ForwardIterator>equal_range(ForwardIterator first,ForwardIterator last,const T& value)
+{
+    return __equal_range(first,last,distance_type(first),iterator_category(first));
+}
+
+template<class RandomAccessIterator,class T,class Distance>
+std::pair<RandomAccessIterator,RandomAccessIterator> __equal_range(RandomAccessIterator first,RandomAccessIterator last,
+Distance*,random_iterator_tag)
+{
+    Distance len = last-first;
+    Distance half;
+    RandomAccessIterator middle,left,right;
+    while(len > 0)
+    {
+        half = len>>1;
+        middle = first+half;
+        if(*middle < value) //如果中间值小于当前值，区间往右边移动
+        {
+            first = middle+1;
+            len = len - half -1;
+        }
+        else if(value < *middle) //如果中间值大于当前值，区间往左边移动
+            len = half;
+        else
+        {
+            //在前半段找对应元素
+            left = lower_bound(first,middle,value);
+            //在后半段中查找
+            right = upper_bound(++middle,first+len,value);
+            return std::pair<RandomAccessIterator,RandomAccessIterator>(left,right);
+        }
+    }
+    //如果匹配不到，直接返回一对迭代器，指向第一个大于value的元素
+    return pair<RandomAccessIterator,RandomAccessIterator>(first,first);
+}
+
+//inplace_merge 合并两个有序区间
+template<class BidirectionalIterator>
+inline void inplace_merge(BidirectionalIterator first,BidirectionalIterator middle,BidirectionalIterator last)
+{
+    if(first == middle || middle == last)return;
+    __inplace_merge_anx(first,middle,last,value_type(first),distance_type(first));
+}
+
+template<class BidirectionalIterator,class T,class Distance>
+inline void __inplace_merge_anx(BidirectionalIterator first,BidirectionalIterator middle,BidirectionalIterator last,
+T*,Distance*)
+{
+    Distance len1 = 0;
+    distance(first,middle,len1);
+    Distance len2 = 0;
+    distance(middle,last,len2);
+    
+    //注意，本算法会使用额外的内存空间(暂时缓冲区)
+    temporary_buffer<BidirectionalIterator,T>buf(first,last);
+    if(buf.begin() == 0) //内存配置失败
+    {
+        __merge_without_buffer(first,middle,last,len1,len2);
+    }
+    else
+        __merge_adaptive(first,middle,last,len1,len2,buf.begin(),Distance(buf.size()));
+}
+
+//由于存在缓冲区辅助，效率会好很多，但是在不存在缓冲区的情况下，也可以继续运作，下面只会考虑有缓冲区的情况
+template<class BidirectionalIterator,class Distance,class Pointer>
+void __merge_adaptive(BidirectionalIterator first,BidirectionalIterator middle,
+                    BidirectionalIterator last,Distance len1,Distance len2,
+                    Pointer buffer,Distance buffer_size)
+{
+    if(len1 < len2 && len1 <= buffer_size)
+    {
+        //如果满足安置序列一
+        Pointer end_buffer = copy(first,middle,buffer); //直接放入缓冲区进行拷贝
+        merge(buffer,end_buffer,middle,last,first); //进行合并
+    }
+    else if(len2 <= buffer_size)
+    {
+        //如果满足安置序列二
+        Pointer end_buffer = copy(middle,last,buffer);
+        __merge_backward(first,middle,buffer,end_buffer,last);
+    }
+    else{
+        //缓冲区空间不足安置任何一个序列
+        BidirectionalIterator first_cut = first;
+        BidirectionalIterator second_cut = middle;
+        Distance len11 = 0;
+        Distance len22 = 0;
+        if(len1 > len2)
+        { 
+            //序列一比较长
+            len11 = len1 / 2;
+            advane(first_cut,len11);
+            second_cut = lower_bound(middle,last,*first_cut);
+            distance(middle,second_cut,len22);
+        }
+        else
+        {
+            //序列二比较长
+            len22 = len2 / 2;
+            advance(second_cut,len22);
+            first_cut = upper_bound(first,middle,*second_cut);
+            distance(first,first_cut,len11);
+        }
+
+        BidirectionalIterator new_middle = __rotate_adaptive(first_cut,middle,second_cut,len1-len11,len22,buffer,buffer_size);
+        //针对左半边递归进行调整
+        __merge_adaptive(first,first_cut,new_middle,len11,len22,buffer,buffer_size);
+        //针对右半边递归进行
+        __merge_adaptive(new_middle,second_cut,last,len1-len11,len2 -len22,buffer,buffer_size);
+    }
+}
+
+//中心思想，如果满足缓冲大小，则进行拷贝复制操作，不满足则调用rotate
+template<class BidirectionalIterator1,class BidirectionalIterator2,class Distance>
+BidirectionalIterator1 __rotate_adptive(BidirectionalIterator1 first,BidirectionalIterator1 middle,
+                                        BidirectionalIterator1 last,Distance len1,Distance len2,
+                                        BidirectionalIterator2 buffer,Distance buffer_size)
+{
+    BidirectionalIterator2 buffer_end;
+    if(len1 > len2 && len2 <= buffer_size)
+    {
+        //缓冲区足够安置序列二 较短
+        buffer_end = copy(middle,last,buffer);
+        copy_backward(first,middle,last);
+        return copy(buffer,buffer_end,first);
+    }
+    else if(len1 < buffer_size)
+    {
+        //缓冲区能够安置序列一
+        buffer_end = copy(first,middle,buffer);
+        copy(middle,last,first);
+        return copy_backward(buffer,buffer_end,last);        
+    }
+    else{
+        rotate(first,middle,last);
+        advance(first,len2);
+        return first;
+    }
+}
+
 };
