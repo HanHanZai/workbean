@@ -3274,4 +3274,107 @@ BidirectionalIterator1 __rotate_adptive(BidirectionalIterator1 first,Bidirection
     }
 }
 
+//nth_element
+//重新排序，使迭代器nth所指向的元素，小于对应值的在其左边
+template<class RandomAccessIterator>
+inline void nth_element(RandomAccessIterator first,RandomAccessIterator nth,RandomAccessIterator last)
+{
+    __nth_element(first,nth,last);
+}
+
+template<class RandomAccessIterator>
+inline void __nth_element(RandomAccessIterator first,RandomAccessIterator nth,RandomAccessIterator last)
+{
+    while(last - first > 3)
+    {
+        //使用三点式进行分割
+        RandomAccessIterator cut = __unguarded_partition(first,last,T(_median(*first,*(first + (last - first)/2),*(last-1))));
+        if(cut <= nth)
+            first = cut;
+        else
+            last = cut;
+    }
+    __insertion_sort(first,last); //插入排序 这里只对最后三个元素进行排序 所以不保证左右两边是有序的，效率也要高一些
+}
+
+//merge sort 归并排序 使用递归来进行处理
+//虽然merge sort 时间复杂度是O(nlogn)，但是里面涉及到了元素的大量操作，导致效率比不上快排，但是比较简单，需要O(nlogn)空间
+template<class BidirectionIterator>
+void mergesort(BidirectionIterator first,BidirectionIterator last)
+{
+    typename iterator_triats<BidirectionIterator>::difference_type n = distance(first,last);
+    if(n == 0 || n == 1)
+        return;
+    BidirectionIterator mid = first + (n>>1);
+    mergesort(first,mid);
+    mergesort(mid,last);
+    inplace_merge(first,mid,last);
+}
+
+//仿函数
+//仿函数能像变量一样进行赋值，如果要将某个操作当作算法的参数，唯一办法就是先将该"操作"设计为一个函数，再将函数指针当作算法的一个参数，或者将这个参数
+//设计为一个所谓的仿函数
+//如果要为一个对象实现一个行为类函数，那么就需要重载operator()运算符号
+//比如greater<int>,可以通过greater<int>(a,b)
+//仿函数可以分为三种，算术运算，关系运算，逻辑运算三大类
+//函数可配接的关键
+//<stl_function.h>中定义了两个classes，分别代表一元和二元仿函数，其中没有任何data members或member functions,唯有一些型别定义
+//一元仿函数
+template<class Arg,class Result>
+struct unary_function
+{
+    typedef Arg argument_type;
+    typedef Result result_type;
+};
+
+//以下仿函数继承了一元仿函数
+template<class T>
+struct negate:public unary_function<T,T>
+{
+    T operator()(const T& x)const{return -x;}
+};
+
+//以下配接器用来表示某个仿函数的逻辑负值
+template<class Predicate>
+class unary_negate
+{
+    ...
+public:
+    bool operator()(const typename Predicate::argument& x)const{
+        ...
+    }
+};
+
+//二元仿函数，只是多了一个参数而已
+template<class Arg1,class Arg2,class Result>
+struct binary_function
+{
+    typedef Arg1 first_argument_type;
+    typedef Arg2 second_argument_type;
+    typedef Result result_type;
+};
+
+template<class T>
+struct plus:public binary_funtion<T,T,T>
+{
+    T operator()(const T& x,const T& y)const{return x + y;}
+};
+
+//以下配接器将一个二元仿函数转换为一个一元仿函数
+template<class Operator>
+class binderlst
+{
+protected:
+    Operator op;
+    typename Operator::first_argument_type value;
+public:
+    typename Operator::result_type operator()(const Operator::second_argument_type& x)const{}
+};
+
+//算术类仿函数
+//plus<T> minus<T> multiplies<T> divides<T> modulus<T>取模 都是二元仿函数
+//negate<T>是一元仿函数
+
+//证同函数(identily element)---所谓证同函数，意思是数值A若与该元素做op操作，最后会得到A自己，加法的证同函数就是0，乘法也是1
+//453
 };
