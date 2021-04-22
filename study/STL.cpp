@@ -3376,5 +3376,130 @@ public:
 //negate<T>是一元仿函数
 
 //证同函数(identily element)---所谓证同函数，意思是数值A若与该元素做op操作，最后会得到A自己，加法的证同函数就是0，乘法也是1
-//453
+template<class T>
+inline T identity_element(plus<T>){return T(0);}
+
+template<class T>
+inline T identity_element(multiplies<T>){return T(1);}
+
+//关系运算类仿函数
+//equal_to<T> not_equal_to<T> greater<T> greater_equal<T> less<T> less_equal<T>
+//等于
+template<class T>
+struct equal_to:public binary_function<T,T,bool>
+{
+    bool operator()(const T& x,const T& y)const{return x == y;}
+};
+
+//不等于
+template<class T>
+struct not_equal_to:public binary_function<T,T,bool>
+{
+    bool operator()(const T& x,const T& y)const{return x!=y;}
+};
+
+//大于
+template<class T>
+struct greater:public binary_function<T,T,bool>
+{
+    bool operator()(const T& x,const T& y)const{return x > y;}
+};
+
+//大于等于
+template<class T>
+struct greater_equal:public binary_function<T,T,bool>
+{
+    bool operator()(const T& x,const T& y)const{return x >= y;}
+};
+
+//小于
+template<class T>
+struct less:public binary_function<T,T,bool>
+{
+    bool operator()(const T& x,const T& y)const{return x < y;}
+};
+
+//小于等于
+template<class T>
+struct less_equal:public binary_function<T,T,bool>
+{
+    bool operator()(const T& x,const T& y)const{return x <= y;}
+};
+
+//逻辑运算仿函数
+//逻辑运算And
+template<class T>
+struct logical_and:public binary_function<T,T,bool>
+{
+    bool operator()(const T& x,const T& y)const{return x && y;}
+};
+
+//逻辑运算or
+template<class T>
+struct logical_or:public binary_function<T,T,bool>
+{
+    bool operator()(const T& x,const T& y)const{return x || y;}
+};
+
+//逻辑运算not
+template<class T>
+struct logical_not:public unary_function<T,bool>
+{
+    bool operator()(const T& x){return !x;}
+};
+
+//证同，选择，投射
+template<class T>
+struct identity:public unary_function<T,T>
+{
+    const T& operator()(const T& x)const{return x;}
+};
+
+//选择函数，接受一个pair，传回第一个元素
+template<class Pair>
+struct select1st:public unary_function<Pair,typename Pair::first_type>
+{
+    const typename Pair::first_type& operator()(const Pair& x)const{
+        return x.first;
+    }
+};
+
+//选择函数，接受一个pair，传回第二个元素
+template<class Pair>
+struct select2nd:public unary_function<Pair,typename Pair::second_type>
+{
+    const typename Pair::second_type& operator()(cosnt Pair& x)const{
+        return x.second;
+    }
+};
+
+//投射函数，传回第一参数，忽略第二参数
+template<class Arg1,class Arg2>
+struct project1st:public binary_function<Arg1,Arg2,Arg1>
+{
+    Arg1 operator()(const Arg1& x,const Arg2&)const{return x;}
+};
+
+//投射函数，传回第二参数，忽略第一参数
+template<class Arg1,class Arg2>
+struct project2nd:public binary_function<Arg1,Arg2,Arg2>
+{
+    Arg2 operator()(const Arg1&,const Arg2& y)const{return y;}
+};
+
+//配接器
+//改变仿函数接口者，我们可以称之为function adapter,改变容器接口者(containers)，我们称之为容器配接器，改变迭代器(iterators)，我们称之为
+//迭代器配接器
+//应用于容器，STL提供2个容器queue和stack，他们都是配接器，他们都是依据deque的接口而成就出另一种容器风貌
+//STL中提供了许多应用于迭代器身上的配接器，包括insert iterators，reverse interators，iostream iterators
+//实际上被定义在<stl_iterator.h>中
+//insert Iterator，可以将一般迭代器的赋值操作转变为插入操作，这样的迭代器包括尾部插入操作的back_insert_iterator
+//头部插入操作的front_insert_iterator,以及可从任意位置执行插入操作的insert_iterator
+//所以包含三个响应的函数back_inserter(),front_insert(),inserter()
+
+//反转迭代器 Reverse Iterators,所以对应的--操作变成了++。++操作变成了对应的--操作
+
+//输入输出迭代器 IOStream Iterators,绑定到istream对象身上，绑定到istream对象身上的，就是istream_iterator,拥有输入功能，绑定到
+//ostream_iterator,拥有输出功能，这种迭代器运用于屏幕输出
+
 };
