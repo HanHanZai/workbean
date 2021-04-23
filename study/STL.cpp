@@ -3502,4 +3502,10 @@ struct project2nd:public binary_function<Arg1,Arg2,Arg2>
 //输入输出迭代器 IOStream Iterators,绑定到istream对象身上，绑定到istream对象身上的，就是istream_iterator,拥有输入功能，绑定到
 //ostream_iterator,拥有输出功能，这种迭代器运用于屏幕输出
 
+//应用于伪函数
+//可以通过函数之间的绑定，组合，修饰能力，可以无限的创造出各种可能的表达式，搭配STL算法一起演出
+//不小于12的数
+//bind2nd(less<T>(),12); 绑定第二个参数为12
+
+//463
 };
