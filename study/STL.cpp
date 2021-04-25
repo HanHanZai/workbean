@@ -3530,7 +3530,7 @@ protected:
     ...
 };
 //2.queue
-template<class T,class Sequence = deque<T,T>>
+template<class T,class Sequence = deque<T,T> >
 class queue{
 protected:
     Sequence c;    
@@ -3538,7 +3538,7 @@ protected:
 };
 
 //迭代器配接器
-//插入迭代器
+//插入迭代器 用来将某个迭代器的赋值操作修改为插入操作，从尾端插入进去
 template<class Container>
 class back_insert_iterator{
 protected:
@@ -3565,6 +3565,222 @@ template<class Container>
 inline back_insert_iterator<Container> back_inserter(Container& x)
 {
     return back_insert_iterator<Container>(x);
-}
+};
 
+//这是一个迭代器配接器，用来将某个迭代器的赋值操作修改为插入操作，从容器的头部插入进去，该迭代器
+//不适用于vector，因为vector没有提供push_front函数
+template<class Container>
+class front_insert_iterator{
+protected:
+    Container* container;
+public:
+    typedef output_iterator_tag iterator_category;
+    typedef void value_type;
+    typedef void difference_type;
+    typedef void pointer;
+    typedef void reference;
+    explicit front_insert_iterator(Container& x):container(x){};
+    front_insert_iterator<Container>& operator=(const typename Container::value_type& value){
+        container->push_front(value);
+        return *this;
+    }
+    front_insert_iterator<Container>& operator*(){return *this;}
+    front_insert_iterator<Container>& operator++(){return *this;}
+    front_insert_iterator<Container>& operator++(int){return *this;}
+};
+
+template<class Container>
+inline front_insert_iterator<Container> front_inserter(Container& x){
+    return front_insert_iterator<Container>(x);
+};
+
+//将某个迭代器的赋值操作修改为插入操作，从任意位置进行插入
+template<class Container>
+class insert_iterator{
+protected:
+    Container* container;//底层容器
+    typename Container::iterator itor;
+public:
+    typedef output_iterator_tag iterator_category;
+    typedef void value_type;
+    typedef void difference_type;
+    typedef void pointer;
+    typedef void reference;
+
+    insert_iterator(Container& x,typename Container::iterator i):container(x),itor(i){
+    }
+
+    insert_iterator<Container>& operator=(const typename Container::value_type& x){
+        itor = container->insert(itor,x);
+        itor++;
+        return *this;
+    }
+
+    insert_iterator<Container>& operator*(){return *this;}
+    insert_iterator<Container>& operator++(){return *this;}
+    insert_iterator<Container>& operator++(int){return *this;}
+};
+
+template<class Container,class Iterator>
+inline insert_iterator<Container> inserter(Container& x,Iterator i){
+    return insert_iterator<Container,iterator>(x,Iterator(i));
+};
+
+//reverse_iterator 逆向迭代器
+//将迭代器的移动行为进行倒转
+//只要满足双向迭代器的容器都满足逆向迭代器，如果只满足单向迭代器，那么就不提供对应的逆向迭代器的功能
+//容器stack，queue，priority_queue并不提供begin和end的方法，当然不支持rbegin,rend操作
+template<class Iterator>
+class reverse_iterator
+{
+protected:
+    Iterator current;
+public:
+    typedef typename iterator_traits<Iterator>::iterator_category iterator_category;
+    typedef typename iterator_traits<Iterator>::value_type value_type;
+    typedef typename iterator_traits<Iterator>::difference_type difference_type;
+    typedef typename iterator_traits<Iterator>::pointer pointer;
+    typedef typename iterator_traits<Iterator>::reference reference;
+
+    typedef Iterator iterator_type;   //正向迭代器
+    typedef reverse_iterator<Iterator> self;  //逆向迭代器
+
+public:
+    reverse_iterator(){};
+    explicit reverse_iterator(iterator_type x):current(x){};
+    reverse_iterator(const self& x):current(x.current){};
+    iterator_type base()const{return current;}
+    reference operator*()const{
+        Iterator tmp = current;
+        return *--tmp; //关键点，对逆向迭代器取值，就是将“对应之正向迭代器”后退一格然后取值
+    }
+    pointer operator->()const{return &(operator*());}
+    self& operator++(){
+        --current;
+        return *this;
+    }
+
+    self& opeartor++(int)
+    {
+        self tmp = *this;
+        --this;
+        return tmp;
+    }
+
+    self& operator--()
+    {
+        ++current;
+        return *this;
+    }
+
+    self& operator--(int)
+    {
+        self tmp = *this;
+        ++this;
+        return tmp;
+    }
+    
+    //前进与后退的方向完全逆转
+    self operator+(difference_type n)const{
+        return self(current - n);
+    }
+
+    self operator+=(difference_type n)const{
+        current -= n;
+        return *this;
+    }
+
+    self operator-(difference_type n)const{
+        return self(current + n);
+    }
+
+    self operator-=(difference_type n)const{
+        current += n;
+        return *this;
+    }
+
+    reference operator[](difference_type n)const{
+        return *(*this + n); //*this 获取到的是具体的迭代器，外面的这个*和+都是会调用本类的*和+
+    }
+};
+
+
+//stream iterator
+//可以将迭代器绑定到一个stream数据流上，绑定到istream身上(例如std::cin)者，称为istream_iterator,拥有输入能力
+//绑定到ostream身上(例如std::cout),称为ostream_iterator,拥有输出能力,所以不存在++和--操作
+template<class T,class Distance=ptrdiff_t>
+class istream_iterator
+{
+friend bool operator==(const istream_iterator<T,Distance>& x,const istream_iterator<T,Distance>& y);
+protected:
+    istream* stream;
+    T value;
+    bool end_marker;
+    void read(){
+        end_marker = (*stream)?true:false;
+        if(end_marker)*stream >>value; //关键
+        //以上，输入之后，stream的状态可能改变，所以下面需要再次判断一次决定end_marker
+        //当读到eof或读到类别不符的资料，stream即处于false状态
+        end_marker = (*stream)?true:false;
+    }
+public:
+    typedef input_iterator_tag iterator_category;
+    typedef T value_type;
+    typedef Distance difference_type;
+    typedef const T* pointer;
+    typedef const T& reference; //身为input iterator，所以采用const比较保险
+    istream_iterator():stream(&cin),end_marker(false){}
+    istream_iterator(istream& x):stream(&s){read();}
+    //istream_iterator<int> eos，这里end_marker为false
+    //istream_iterator<int> initer(cin) 引发输入等待
+    reference operator*()const{return value;}
+    pointer operator->()const{return &(operator*());}
+
+    istream_iterator<T,Distance>& operator++(){
+        read();
+        return *this;
+    }
+
+    istream_iterator<T,Distance>& operator--(){
+        read();
+        return *this;
+    }
+
+    istream_iterator<T,Distance> operator++(int)
+    {
+        istream_iterator<T,Distance> tmp = *this;
+        read();
+        return tmp;
+    }
+};
+
+//至于ostream iterator,所谓绑定了一个ostream object，就是在其内部维护一个ostream member，客户端对于这个迭代器所作的operator=操作
+//会被引导调用对应的ostream member的输出操作
+template<class T>
+class ostream_iterator{
+protected:
+    ostream* stream;
+    const char* str;
+public:
+    typedef output_iterator_tag iterator_category;
+    typedef void value_type;
+    typedef void difference_type;
+    typedef void pointer;
+    typedef void referece;
+
+    ostream_iterator(ostream& s):stream(s),str(0){}
+    ostream_iterator(ostream& s,char* c):stream(s),str(c){}
+
+    ostream_iterator<T>& operator=(const T& value){
+        *stream<<value;
+        if(str)*stream <<str;
+        return *this;
+    } 
+
+    ostream_iterator<T>& operator*(){return *this;}
+    ostream_iterator<T>& opeartor++(){return *this;}
+    ostream_iterator<T>& operator++(int){return *this;}
+};
+//ostream_iterator<T> out(cout," ")
+//480
 };
