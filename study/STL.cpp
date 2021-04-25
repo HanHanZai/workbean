@@ -3507,5 +3507,64 @@ struct project2nd:public binary_function<Arg1,Arg2,Arg2>
 //不小于12的数
 //bind2nd(less<T>(),12); 绑定第二个参数为12
 
-//463
+//组合器
+//compose1(funa,funb),先执行a函数后执行b函数
+//for_each(a,b,ptr_fun(print)) ptr_fun修饰一般函数
+//mem_fun_ref(&类::函数)修饰成员函数
+// bind1st => op(x,param)
+// bind2nd => op(param,x)
+// not1  => op(param)
+// not2  => op(param1,param2)
+// compose1 => op(param1(param2))
+// compose2 => op(param1(param2(param3)))
+// ptr_fun(Result(*fp)Args) => fp(param)
+// mem_fun(S T::*f) => param->*f
+// ...
+
+//容器配接器 container adapters
+//1.stack
+template<class T,class Sequence = deque<T,T> >
+class stack{
+protected:
+    Sequence c;
+    ...
+};
+//2.queue
+template<class T,class Sequence = deque<T,T>>
+class queue{
+protected:
+    Sequence c;    
+    ...
+};
+
+//迭代器配接器
+//插入迭代器
+template<class Container>
+class back_insert_iterator{
+protected:
+    Container* container;
+public:
+    typedef output_iterator_tag iterator_category;
+    typedef void value_type;
+    typedef void difference_type;
+    typedef void pointer;
+    typedef void reference;
+    explicit back_insert_iterator(Container& x):container(&x){};
+    back_insert_iterator<Container>& operator=(const typename Container::value_type& value){
+        //这里是关键操作
+        container->push_back(value);
+        return *this;
+    };
+    back_insert_iterator<Container>& operator*(){return *this;};
+    back_insert_iterator<Container>& operator++(){return *this;};
+    back_insert_iterator<Container>& operator++(int){return *this;};
+};
+
+//辅助函数，帮助我们方便使用back_insert_iterator
+template<class Container>
+inline back_insert_iterator<Container> back_inserter(Container& x)
+{
+    return back_insert_iterator<Container>(x);
+}
+
 };
