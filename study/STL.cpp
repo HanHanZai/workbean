@@ -3782,5 +3782,276 @@ public:
     ostream_iterator<T>& operator++(int){return *this;}
 };
 //ostream_iterator<T> out(cout," ")
-//480
+
+//函数迭代器
+//对返回值进行逻辑否定：not1,not2
+template<class Predicate>
+class unary_negate:public unary_function<typename Predicate::argument_type,bool>
+{
+protected:
+    Predicate pred;
+public:
+    explicit unary_negate(const Predicate& x):pred(x){};
+    bool operator()(const typename Predicate::argument_type& x)const{
+        return !pred(x);
+    }
+};
+template<class Predicate>
+inline unary_negate<Predicate> not1(const Predicate& pred)
+{
+    return unary_negate<Predicate>(pred);  
+};
+
+template<class Predicate>
+class binary_negate:public binary_function<typename Predicate::first_argument_type,typename Predicate::second_argument_type,bool>
+{
+protected:
+    Predicate pred;
+public:
+    explicit binary_negate(const Predicate& x):pred(x){}
+    bool operator()(const typename Predicate::first_argument_type& x,const typename Predicate::second_argument_type& y) 
+    {
+        return !pred(x,y);
+    }
+};
+template<class Predicate>
+inline binary_negate<Predicate> not2(const Predicate& pred)
+{
+    return binary_negate<Predicate>(pred);
+};
+
+//对参数进行绑定：binder1rs,binder2nd
+template<class Operation>
+class binder1st:public unary_function<typename Operation::second_argument_type,typename Operation::result_type>
+{
+protected:
+    Operation op;
+    typename Operator::first_argument_type value; //内部成员
+public:
+    binder1st(const Operation& x,const Operation::frist_argument_type& y):op(x),value(y){};
+    typename Operation::result_type operator()(const typename Operation::second_argument_type& x)const
+    {
+        return op(value,x);
+    }
+};
+
+template<class Operation,class T>
+inline typename binder1st<Operation>::result_type bind1st(const Operation& op,const T& x)
+{
+    typedef typename Opearation::first_argument_type type;
+    //先将x类型转化为第一个参数类型
+    return binder1st<Opeartion>(op,type(x));    
+};
+
+template<class Operation>
+class binder2nd:public unary_function<typename Operation::first_argument_type,typename Operation::result_type>
+{
+protected:
+    Operation op; //内部成员
+    typename Operation::second_argument_type value;//内部成员
+public:
+    binder2nd(const Operation& x,const Operation::second_argument_type& y):op(x),value(y){};
+    typename Operation::result_type operator()(const typename Operation::first_argument_type& x)const
+    {
+        return op(x,value);
+    }
+};
+
+template<class Operation,class T>
+inline typename binder2nd<Operation>::result_type bind2nd(const Operation& op,const T& x)
+{
+    typedef typename Operation::second_argument_type type;
+    return binder2nd<Operation>(op,type(x));
+};
+
+//用于函数合成 compose1 compose2
+template<class Operator1,class Operator2>
+class unary_compose:unary_function<typename Operator2::argument_type,typename Operator1::result_type>
+{
+protected:
+    Operator1 op1;
+    Operator2 op2;
+public:
+    unary_compose(const Operator1& x,const Operator2& y):op1(x),op2(y){}
+    typename Operator1::result_type operator()(const typename Operator2::argument_type& x)const{
+        op1(op2(x));
+    }
+};
+
+template<class Operator1,class Operator2>
+inline unary_compose<Operator1,Operator2> compose1(const Operator1& x,const Operator2& y){
+    return unary_compose<Operator1,Operator2>(x,y);
+};
+
+template<class Operator1,class Operator2,class Operator3>
+class binary_compose:public unary_function<typename Operator2::argument_type,typename Operator1::result_type>
+{
+protected:
+    Operator1 op1;
+    Operator2 op2;
+    Operator3 op3;
+public:
+    binary_compose(const Operator1& x,const Operator2& y,const Operator3& z):op1(x),op2(y),op3(z){}
+    typename Operator1::result_type operator()(cosnt typename Operator2::argument_type& x)
+    {
+        return op1(op2(x),op3(x)); //函数合成
+    }
+};
+
+template<class Operator1,class Operator2,class Operator3>
+inline binary_compose<Operator1,Operator2,Operator3> compose2(const Operator1& x,const Operator2& y,const Operator3& z)
+{
+    return binary_compose<Operator1,Operator2,Operator3>(x,y,z);
+};
+
+//函数指针ptr_fun,这种配接器能够使得一般函数当作仿函数进行使用
+template<class Arg,class Result>
+class pointer_to_unary_function:public unary_function<Arg,Result>
+{
+protected:
+    Result(*ptr)(Arg);
+public:
+    pointer_to_unary_function(){};
+    explicit pointer_to_unary_function(Result(*x)(Arg)):ptr(x){};
+    Result operator()(Arg x)const{return ptr(x);}
+};
+
+template<class Arg,class Result>
+inline pointer_to_unary_function<Arg,Result>ptr_fun(Result(*x)(Arg))
+{
+    return pointer_to_unary_function<Arg,Result>(x);
+};
+
+//二元函数指针
+template<class Arg1,class Arg2,class Result>
+class pointer_to_binary_function:public binary_function<Arg1,Arg2,Result>
+{
+protected:
+    Result(*ptr)(Arg1,Arg2);
+public:
+    pointer_to_binary_function(){};
+    explicit pointer_to_binary_function(Result(*x)(Arg1,Arg2)):ptr(x){};
+    Result operator()(Arg1 x,Arg2 y)const{return ptr(x,y);}
+};
+
+template<class Arg1,class Arg2,class Result>
+inline pointer_to_binary_function<Arg1,Arg2,Result>ptr_fun(Result(*x)(Arg1,Arg2))
+{
+    return pointer_to_binary_function<Arg1,Arg2,Result>(x);
+};
+
+//用于成员函数指针：mem_fun,mem_fun_ref
+//这种配接器将成员函数当作仿函数来使用
+//for_each(v.begin(),v.end(),mem_fun(&shape::display));
+//STL中不支持引用类型，只支持指针和实值
+//这个族群一共有 8 = 2^3个function object
+//1.无任何参数 vs 有一个参数
+//2.通过pointer调用和通过reference
+//3.const成员函数 vs non-const函数
+//所有的复杂都存在于function object内部，可以忽略，直接使用更上一层的辅助函数mem_fun,mem_fun_ref，他们会产生对应的配接器
+
+//无任何参数，通过pointer调用，non-const函数
+template<class S,class T>
+class mem_fun_t:public unary_function<*T,S>{
+public:
+    explicit mem_fun_t(S(T::*pf)):f(pf){};
+    S operator()(T* p)const {return p->*f();}
+private:
+    S(T::*f)(); //内部成员
+};
+
+//无任何参数，通过pointer调用，const成员函数
+template<class S,class T>
+class const_mem_fun_t:public unary_function<*T,S>
+{
+public:
+    explicit const_mem_fun_t(S(T::*pf)):f(pf){};
+    S operator()(const T* p)const{return p->*f();}
+private:
+    S(T::*f)();
+};
+
+//无任何参数，通过reference调用，const成员函数
+template<class S,class T>
+class const_mem_fun_ref_t:public unary_function<*T,S>
+{
+public:
+    explicit const_mem_fun_ref_t(S(T::*pf)):f(pf){};
+    S operator()(const T& p)const{return p.*f();}
+private:
+    S(T::*f)();
+};
+
+//无任何参数，通过reference调用，non-const成员函数
+template<class S,class T>
+class mem_fun_ref_t:public unary_function<*T,S>
+{
+public:
+    explicit mem_fun_ref_t(S(T::*pf)):f(pf){};
+    S operator()(T& p)const{return p.*f();}
+private:
+    S(T::*f)();
+};
+
+//有一个参数，通过point调用，non-const成员函数
+template<class S,class T,class A>
+class mem_fun1_t:public binary_function<T*,A,S>{
+public:
+    explicit mem_fun1_t(S(T::*pf(A))):f(pf){};
+    S operator()(T* p,A x)const{return (p->*f)(x);}
+private:
+    S(T::*f(A));
+};
+
+//有一个参数，通过point调用，const成员函数
+template<class S,class T,class A>
+class const_mem_fun1_t:public binary_function<T*,A,S>{
+public:
+    explicit const_mem_fun1_t(S(T::*pf(A))):f(pf){};
+    S operator()(const T* p,A x)const{return (p->*f)(x);};
+private:a
+    S(T::*f(A));
+};
+
+//有一个参数，通过reference调用，non-const成员函数
+template<class S,class T,class A>
+class mem_ref1_t:public binary_function<T*,A,S>
+{
+public:
+    explicit mem_ref1_t(S(T::*pf(A))):f(pf){};
+    S operator()(T& p,A x)const {return (p.*f)(A);};
+private:
+    S(T::*f(A));
+};
+
+//有一个参数，通过reference调用，const成员函数
+template<class S,class T,class A>
+class const_mem_ref1_t:public binary_function<T*,A,S>
+{
+public:
+    explicit const_mem_ref1_t(S(T::*pf(A))):f(pf){};
+    S opereator()(const T& p,A x)const{return (p.*f)(A);};
+private:
+    S(T::*f(A));
+};
+
+//辅助函数 对应上面8个类
+template<class S,class T>
+inline mem_fun_t<S,T> mem_fun(S(T::*f)()){
+    return mem_fun_t<S,T>(f);
+};
+
+template<class S,class T>
+inline const_mem_fun_t<S,T> const_mem_fun(S(T::*f)())
+{
+    return const_mem_fun_t<S,T>(f);
+};
+
+template<class S,class T>
+inline mem_fun_ref_t<S,T> const_mem_ref_t(S(T::*f)())
+{
+    return const_mem_ref_t<S,T>(f);
+};
+///
+
 };
