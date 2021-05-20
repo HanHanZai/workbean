@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="IOCP">
+      <UniqueIdentifier>{608a6e50-e402-499a-8612-3acca836baa7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MyServer">
+      <UniqueIdentifier>{05686de2-b72c-437f-ae02-e3f8b51ee7fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HTTP">
+      <UniqueIdentifier>{284aba2a-746d-44dd-8c63-d820f2cbd109}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="IOCP\IocpServer.cpp">
+      <Filter>IOCP</Filter>
+    </ClCompile>
+    <ClCompile Include="IOCP\PerIoContext.cpp">
+      <Filter>IOCP</Filter>
+    </ClCompile>
+    <ClCompile Include="IOCP\PerSocketContext.cpp">
+      <Filter>IOCP</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>MyServer</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>MyServer</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTP\HttpCodec.cpp">
+      <Filter>HTTP</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTP\HttpMessage.cpp">
+      <Filter>HTTP</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTP\HttpServer.cpp">
+      <Filter>HTTP</Filter>
+    </ClCompile>
+    <ClCompile Include="IOCP\Addr.cpp">
+      <Filter>IOCP</Filter>
+    </ClCompile>
+    <ClCompile Include="IOCP\Buffer.cpp">
+      <Filter>IOCP</Filter>
+    </ClCompile>
+    <ClCompile Include="IOCP\BufferSlice.cpp">
+      <Filter>IOCP</Filter>
+    </ClCompile>
+    <ClCompile Include="IOCP\Network.cpp">
+      <Filter>IOCP</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="IOCP\IocpServer.h">
+      <Filter>IOCP</Filter>
+    </ClInclude>
+    <ClInclude Include="IOCP\PerIoContext.h">
+      <Filter>IOCP</Filter>
+    </ClInclude>
+    <ClInclude Include="IOCP\PerSocketContext.h">
+      <Filter>IOCP</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>MyServer</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTP\HttpCodec.h">
+      <Filter>HTTP</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTP\HttpMessage.h">
+      <Filter>HTTP</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTP\HttpServer.h">
+      <Filter>HTTP</Filter>
+    </ClInclude>
+    <ClInclude Include="IOCP\Addr.h">
+      <Filter>IOCP</Filter>
+    </ClInclude>
+    <ClInclude Include="IOCP\Buffer.h">
+      <Filter>IOCP</Filter>
+    </ClInclude>
+    <ClInclude Include="IOCP\BufferSlice.h">
+      <Filter>IOCP</Filter>
+    </ClInclude>
+    <ClInclude Include="IOCP\Network.h">
+      <Filter>IOCP</Filter>
+    </ClInclude>
+    <ClInclude Include="IOCP\LockGuard.h">
+      <Filter>IOCP</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
