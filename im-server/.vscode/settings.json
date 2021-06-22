@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "limits": "cpp",
+        "utility": "cpp",
+        "list": "cpp",
+        "charconv": "cpp",
+        "format": "cpp",
+        "hash_map": "cpp",
+        "xstring": "cpp"
+    }
+}
