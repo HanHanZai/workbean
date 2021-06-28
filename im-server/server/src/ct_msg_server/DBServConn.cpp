@@ -31,12 +31,12 @@ static ConnMap_t g_db_server_conn_map;
 static serv_info_t* g_db_server_list = NULL;
 static uint32_t		g_db_server_count = 0;			// 到DBServer的总连接数
 static uint32_t		g_db_server_login_count = 0;	// 到进行登录处理的DBServer的总连接数
-static CGroupChat*	s_group_chat = NULL;
-static CFileHandler* s_file_handler = NULL;
-static string g_msg_server_ip_addr1;
-static string g_msg_server_ip_addr2;
-static uint16_t g_msg_server_port;
-static uint32_t g_max_conn_cnt;
+static CGroupChat*	s_group_chat = NULL; /* 群聊对象 */
+static CFileHandler* s_file_handler = NULL; /* 文件对象 */
+static string g_msg_server_ip_addr1; /* ip1 */
+static string g_msg_server_ip_addr2; /* ip2 */
+static uint16_t g_msg_server_port; /* 服务器端口 */
+static uint32_t g_max_conn_cnt; /* 最大连接数量 */
 
 extern CAes *pAes;
 
@@ -63,22 +63,30 @@ static void db_server_conn_timer_callback(void* callback_data, uint8_t msg, uint
 
 void init_db_serv_conn(serv_info_t* server_list, uint32_t server_count, uint32_t concur_conn_cnt)
 {
+    /* 服务器列表 */
 	g_db_server_list = server_list;
+    /* 服务器数量 */
 	g_db_server_count = server_count;
 
-	uint32_t total_db_instance = server_count / concur_conn_cnt;
-	g_db_server_login_count = (total_db_instance / 2) * concur_conn_cnt;
-	log("DB server connection index for login business: [0, %u), for other business: [%u, %u) ",
-			g_db_server_login_count, g_db_server_login_count, g_db_server_count);
+    /* 总的db实例对象数量 */
+	uint32_t total_db_instance = server_count / concur_conn_cnt; /* 服务器数量 / 并发支持的数量 */
+	g_db_server_login_count = (total_db_instance / 2) * concur_conn_cnt; /* 登录服务器实例对象数量为总服务器数量的一半 */
+	log("DB server connection index for login business: [0, %u), for other business: [%u, %u) ",g_db_server_login_count, g_db_server_login_count, g_db_server_count);
 
+    /* 初始化所有的数据库列表对象 */
 	serv_init<CDBServConn>(g_db_server_list, g_db_server_count);
 
+    /* 注册数据路定时器回调事务 */
 	netlib_register_timer(db_server_conn_timer_callback, NULL, 1000);
+
+    /* 第一次初始化群组聊天对象 */
 	s_group_chat = CGroupChat::GetInstance();
+    /* 文件处理对象 */
 	s_file_handler = CFileHandler::getInstance();
 }
 
-// get a random db server connection in the range [start_pos, stop_pos)
+// get a random db server connection in the range [start_pos, stop_pos)·
+// 默认前半段数据库实例对象进行登录，后半段实例进行事务处理
 static CDBServConn* get_db_server_conn_in_range(uint32_t start_pos, uint32_t stop_pos)
 {
 	uint32_t i = 0;
@@ -147,6 +155,8 @@ void CDBServConn::Connect(const char* server_ip, uint16_t server_port, uint32_t 
 	log("Connecting to DB Storage Server %s:%d ", server_ip, server_port);
 
 	m_serv_idx = serv_idx;
+    
+    /* 这个是SOCKET套接字连接的返回值， */
 	m_handle = netlib_connect(server_ip, server_port, imconn_callback, (void*)&g_db_server_conn_map);
 
 	if (m_handle != NETLIB_INVALID_HANDLE) {
@@ -166,8 +176,8 @@ void CDBServConn::Close()
 
 	ReleaseRef();
 }
-void init_msg_serv_count(const char* msg_server_ip_addr1,
-                          const char* msg_server_ip_addr2, uint16_t msg_server_port, uint32_t max_conn_cnt)
+void init_msg_serv_count(const char* msg_server_ip_addr1,const char* msg_server_ip_addr2, 
+                        uint16_t msg_server_port, uint32_t max_conn_cnt)
 {
 
     g_msg_server_ip_addr1 = msg_server_ip_addr1;
@@ -184,26 +194,33 @@ void CDBServConn::OnConfirm()
 	g_db_server_list[m_serv_idx].reconnect_cnt = MIN_RECONNECT_CNT / 2;
 
 	//将本msg实例信息上传到db服务器上。然后通过api将存在reids中的信息分配给客服端使用
-    uint32_t cur_conn_cnt = 0;
-    uint32_t shop_user_cnt = 0;
+    uint32_t cur_conn_cnt = 0; //当前连接数量
+    uint32_t shop_user_cnt = 0; //商城用户数量
 
     list<user_conn_t> user_conn_list;
+    /* 获取用户数量 */
     CImUserManager::GetInstance()->GetUserConnCnt(&user_conn_list, cur_conn_cnt);
+
     char hostname[256] = {0};
     gethostname(hostname, 256);
     IM::Server::IMMsgServInfo msg;
-    msg.set_ip1(g_msg_server_ip_addr1);
+    //一共2个ip地址
+    msg.set_ip1(g_msg_server_ip_addr1); 
     msg.set_ip2(g_msg_server_ip_addr2);
+    //设置端口
     msg.set_port(g_msg_server_port);
+    //设置最大连接数量
     msg.set_max_conn_cnt(g_max_conn_cnt);
+    //设置当前连接数量
     msg.set_cur_conn_cnt(cur_conn_cnt);
+    /* 设置主机名称 */
     msg.set_host_name(hostname);
+
     CImPdu pdu;
     pdu.SetPBMsg(&msg);
     pdu.SetServiceId(SID_OTHER);
     pdu.SetCommandId(CID_OTHER_MSG_SERV_INFO);
     SendPdu(&pdu);
-
 }
 
 void CDBServConn::OnClose()
@@ -219,96 +236,98 @@ void CDBServConn::OnTimer(uint64_t curr_tick)
         CImPdu pdu;
         pdu.SetPBMsg(&msg);
         pdu.SetServiceId(SID_OTHER);
-        pdu.SetCommandId(CID_OTHER_HEARTBEAT);
+        pdu.SetCommandId(CID_OTHER_HEARTBEAT); /* 发送心跳 */
 		SendPdu(&pdu);
 	}
 
+    /* 超时就关闭当前连接 */
 	if (curr_tick > m_last_recv_tick + SERVER_TIMEOUT) {
 		log("conn to db server timeout");
 		Close();
 	}
 }
 
+/* 接收到服务器的消息 */
 void CDBServConn::HandlePdu(CImPdu* pPdu)
 {
 	switch (pPdu->GetCommandId()) {
         case CID_OTHER_HEARTBEAT:
             break;
-        case CID_OTHER_VALIDATE_RSP:
-            _HandleValidateResponse(pPdu );
+        case CID_OTHER_VALIDATE_RSP: //验证回应消息
+            _HandleValidateResponse(pPdu);
             break;
-        case CID_LOGIN_RES_DEVICETOKEN:
+        case CID_LOGIN_RES_DEVICETOKEN: //设置设备token信息的回应
             _HandleSetDeviceTokenResponse(pPdu);
             break;
-        case CID_LOGIN_RES_PUSH_SHIELD:
+        case CID_LOGIN_RES_PUSH_SHIELD: //屏蔽消息的回应
             _HandlePushShieldResponse(pPdu);
             break;
-        case CID_LOGIN_RES_QUERY_PUSH_SHIELD:
+        case CID_LOGIN_RES_QUERY_PUSH_SHIELD: //查询屏蔽的回应
             _HandleQueryPushShieldResponse(pPdu);
             break;
-        case CID_MSG_UNREAD_CNT_RESPONSE:
+        case CID_MSG_UNREAD_CNT_RESPONSE: //获取消息未读的消息回应
             _HandleUnreadMsgCountResponse( pPdu );
             break;
-        case CID_MSG_LIST_RESPONSE:
+        case CID_MSG_LIST_RESPONSE://消息列表回应
             _HandleGetMsgListResponse(pPdu);
             break;
-        case CID_MSG_GET_BY_MSG_ID_RES:
+        case CID_MSG_GET_BY_MSG_ID_RES: //通过消息id获取消息的回应
             _HandleGetMsgByIdResponse(pPdu);
             break;
-        case CID_MSG_DATA:
+        case CID_MSG_DATA: //数据消息
             _HandleMsgData(pPdu);
             break;
-        case CID_MSG_GET_LATEST_MSG_ID_RSP:
+        case CID_MSG_GET_LATEST_MSG_ID_RSP: //获取最近的消息id回应
             _HandleGetLatestMsgIDRsp(pPdu);
             break;
-        case CID_BUDDY_LIST_RECENT_CONTACT_SESSION_RESPONSE:
+        case CID_BUDDY_LIST_RECENT_CONTACT_SESSION_RESPONSE: //获取过去的对话session列表
             _HandleRecentSessionResponse(pPdu);
             break;
-        case CID_BUDDY_LIST_ALL_USER_RESPONSE:
+        case CID_BUDDY_LIST_ALL_USER_RESPONSE: //获取所有用户的回应
             _HandleAllUserResponse(pPdu);
             break;
-        case CID_BUDDY_LIST_USER_INFO_RESPONSE:
+        case CID_BUDDY_LIST_USER_INFO_RESPONSE: //获取列表用户信息
             _HandleUsersInfoResponse(pPdu );
             break;
-        case CID_BUDDY_LIST_REMOVE_SESSION_RES:
+        case CID_BUDDY_LIST_REMOVE_SESSION_RES: //获取移除session的回应
             _HandleRemoveSessionResponse(pPdu );
             break;
-        case CID_BUDDY_LIST_CHANGE_AVATAR_RESPONSE:
+        case CID_BUDDY_LIST_CHANGE_AVATAR_RESPONSE: //处理图标改变的回应
             _HandleChangeAvatarResponse(pPdu);
             break;
-        case CID_BUDDY_LIST_CHANGE_SIGN_INFO_RESPONSE:
+        case CID_BUDDY_LIST_CHANGE_SIGN_INFO_RESPONSE: //修改登录信息的回应
             _HandleChangeSignInfoResponse(pPdu);
             break;
-        case CID_BUDDY_LIST_DEPARTMENT_RESPONSE:
+        case CID_BUDDY_LIST_DEPARTMENT_RESPONSE: //处理部门相关回应
             _HandleDepartmentResponse(pPdu);
             break;
-        case CID_OTHER_GET_DEVICE_TOKEN_RSP:
+        case CID_OTHER_GET_DEVICE_TOKEN_RSP: //获取设备token的消息回应
             _HandleGetDeviceTokenResponse(pPdu);
             break;
-        case CID_OTHER_GET_SHIELD_RSP:
+        case CID_OTHER_GET_SHIELD_RSP: //获取群组屏蔽的消息回应
             s_group_chat->HandleGroupGetShieldByGroupResponse(pPdu);
             break;
-        case CID_OTHER_STOP_RECV_PACKET:
+        case CID_OTHER_STOP_RECV_PACKET: //停止接收包信息
             _HandleStopReceivePacket(pPdu);
             break;
         //group
-        case CID_GROUP_NORMAL_LIST_RESPONSE:
-            s_group_chat->HandleGroupNormalResponse( pPdu );
+        case CID_GROUP_NORMAL_LIST_RESPONSE: //获取群组的基本信息回应
+            s_group_chat->HandleGroupNormalResponse(pPdu);
             break;
-        case CID_GROUP_INFO_RESPONSE:
+        case CID_GROUP_INFO_RESPONSE: //获取群组信息回应
             s_group_chat->HandleGroupInfoResponse(pPdu);
             break;
-        case CID_GROUP_CREATE_RESPONSE:
+        case CID_GROUP_CREATE_RESPONSE: //创建群组的消息回应
             s_group_chat->HandleGroupCreateResponse(pPdu);
             break;
-        case CID_GROUP_CHANGE_MEMBER_RESPONSE:
+        case CID_GROUP_CHANGE_MEMBER_RESPONSE: //修改成员的回应
             s_group_chat->HandleGroupChangeMemberResponse(pPdu);
             break;
-        case CID_GROUP_SHIELD_GROUP_RESPONSE:
+        case CID_GROUP_SHIELD_GROUP_RESPONSE: //屏蔽群组的相关回应
             s_group_chat->HandleGroupShieldGroupResponse(pPdu);
             break;
         
-        case CID_FILE_HAS_OFFLINE_RES:
+        case CID_FILE_HAS_OFFLINE_RES: //文件离线服务器相关服务器地址回应
             s_file_handler->HandleFileHasOfflineRes(pPdu);
             break;
         

@@ -239,6 +239,7 @@ void CMsgConn::Close(bool kick_user)
     ReleaseRef();
 }
 
+/* 连接的客户端 */
 void CMsgConn::OnConnect(net_handle_t handle)
 {
 	m_handle = handle;
@@ -303,6 +304,7 @@ void CMsgConn::OnTimer(uint64_t curr_tick)
 	}
 }
 
+/* 这里读取到的数据信息都是来自于客户端，所以MsgConn是个服务器 */
 void CMsgConn::HandlePdu(CImPdu* pPdu)
 {
 	// request authorization check
@@ -450,6 +452,7 @@ void CMsgConn::_HandleLoginRequest(CImPdu* pPdu)
         result_string = "服务端异常";
     }
 
+    /* 异常回应 */
     if (result) {
         IM::Login::IMLoginRes msg;
         msg.set_server_time(time(NULL));

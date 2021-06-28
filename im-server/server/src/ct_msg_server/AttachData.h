@@ -18,9 +18,11 @@ enum {
     ATTACH_TYPE_HANDLE_AND_PDU_FOR_FILE = 5,
 };
 
+//序列化数据库数据对象
 class CDbAttachData
 {
 public:
+	/* 附加数据 */
 	CDbAttachData(uint32_t type, uint32_t handle, uint32_t service_type = 0);				// 序列化
 	CDbAttachData(uchar_t* attach_data, uint32_t attach_len);	// 反序列化
 	virtual ~CDbAttachData() {}
@@ -37,6 +39,7 @@ private:
     uint32_t        m_service_type;
 };
 
+//Pdu数据对象
 class CPduAttachData
 {
 public:
