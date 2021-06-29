@@ -102,10 +102,12 @@ void CIOLoop::Run()
 					{
 						if (pIOStream->GetSockType() == SOCK_TCP_SERVER)
 						{
+							/* 连接成功 */
 							pIOStream->OnAccept();
 						}
 						else
 						{
+							/* 接收数据 */
 							pIOStream->OnRecv();
 						}	
 					}

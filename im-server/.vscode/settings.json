@@ -6,6 +6,7 @@
         "charconv": "cpp",
         "format": "cpp",
         "hash_map": "cpp",
-        "xstring": "cpp"
+        "xstring": "cpp",
+        "memory": "cpp"
     }
 }

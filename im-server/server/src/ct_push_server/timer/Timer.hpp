@@ -111,6 +111,7 @@ public:
 		return 0;
 	}
 
+	/* 根据index，移除对应的定时器任务 */
 	int KillTimer(int nIndex)
 	{
 		m_MapMutex.Lock();
@@ -138,7 +139,7 @@ public:
 			map<int, pair<unsigned int, unsigned int > >::iterator iter = tmp.begin();
 			while (iter != tmp.end())
 			{
-				iter->second.second += 500;
+				iter->second.second += 500; 
 				if (iter->second.second >= iter->second.first)
 				{
 					pInstance->m_pTimerProc(iter->first, paramtmp[iter->first]);
@@ -173,7 +174,7 @@ public:
 	//Quit flag 1:quit; 0--not
 	int m_iQuit;
 
-	map<int/* nIndex */, pair<unsigned int/* time of miliseconds 预设定时器的时间 */ , unsigned int/* time of miliseconds，当前时间 */> > m_MapInterval;
+	map<int/* nIndex */, pair<unsigned int/* time of miliseconds 预设定时器的时间 */ , unsigned int/* time of miliseconds，当前时间 */> >  ;
 	map<int/* nIndex */, void* > m_MapParam;
 
 	//时间线程

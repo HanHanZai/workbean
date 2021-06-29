@@ -59,8 +59,10 @@ public:
 		S_RecvFrom(m_wake_sock_recv, szMsg, 32, szIP, &nPort);
 	}
 private:
+	/* 数据接收socket */
 	S_SOCKET m_wake_sock_recv;
-	S_SOCKET m_wake_sock_send;
+	/* 数据发送socket */
+	S_SOCKET m_wake_sock_send; 
     char m_szRecvIP[32];
     int32_t m_nRecvPort;
 };
@@ -77,9 +79,13 @@ public:
 	virtual void Stop();
 	virtual void Run();
 
+	/* 添加io对象 */
 	virtual void Add_Handler( CBaseIOStream* piostream );
+	/* 移开io对象 */
 	virtual void Remove_Handler(CBaseIOStream* piostream);
+	/* 添加写入事件 */
 	virtual void Add_WriteEvent(CBaseIOStream* piostream) { m_waker.Wake(); }
+	/* 移除写入事件 */
 	virtual void Remove_WriteEvent(CBaseIOStream* piostream) { m_waker.Wake(); }
 protected:
 	CBaseIOStream* _GetHandlerBySock(S_SOCKET sock);

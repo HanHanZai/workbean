@@ -25,6 +25,7 @@ CSessionManager::~CSessionManager()
     ClearPushSession();
 }
 
+/* c++保证决定线程安全 */
 CSessionManager* CSessionManager::GetInstance()
 {
     static CSessionManager session_manager;
@@ -114,17 +115,20 @@ void CSessionManager::RemovePushServer()
     }
 }
 
+/* 推入一个推送会话 */
 void CSessionManager::StartCheckPushSession()
 {
     m_checktimer.StartTimer(TIMER_INDEX_CHECK_PUSHSESSION, CSessionManager::TimerProc,
                             TIME_CHECK_PUSHSESSION, this);
 }
 
+/* 停止所有对话 */
 void CSessionManager::StopCheckPushSession()
 {
     m_checktimer.StopTimer();
 }
 
+/* 心跳超时 */
 void CSessionManager::CheckPushSessionTimeOut()
 {
     m_MapIOPushSessionBySockIDMutex.Lock();
@@ -139,10 +143,10 @@ void CSessionManager::CheckPushSessionTimeOut()
         uint64_t last_time = pSession->GetLastHeartBeat();
         if (cur_time - last_time >= TIMEOUT_PUSHSESSION)
         {
-            PUSH_SERVER_WARN("push session time out, remote ip: %s, port: %d.", pSession->GetRemoteIP(),
-                             pSession->GetRemotePort());
+            PUSH_SERVER_WARN("push session time out, remote ip: %s, port: %d.", pSession->GetRemoteIP(),pSession->GetRemotePort());
             pSession->Stop();
         }
     }
+    /* tmp是拷贝，所有没啥问题 */
     tmp.clear();
 }

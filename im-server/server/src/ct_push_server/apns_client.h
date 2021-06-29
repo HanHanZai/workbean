@@ -31,7 +31,7 @@ static ST_APNS s_apn_servers[4] =
     {"feedback.push.apple.com", 2196}
 };
 
-
+/* 推送通知服务器 */
 class CAPNSClient : public std::enable_shared_from_this<CAPNSClient>
 {
 public:

@@ -39,6 +39,7 @@ CEventDispatch::~CEventDispatch()
 }
 
 /* 增加或者更新一个回调，根据回调和用户数据当作标识 */
+/* 保证先addTime后再启动事件循环,可以不会加锁,即单线程中进行定时器添加 */
 void CEventDispatch::AddTimer(callback_t callback, void* user_data, uint64_t interval)
 {
 	list<TimerItem*>::iterator it;
@@ -63,6 +64,7 @@ void CEventDispatch::AddTimer(callback_t callback, void* user_data, uint64_t int
 	m_timer_list.push_back(pItem);
 }
 
+/* 同理如上 */
 void CEventDispatch::RemoveTimer(callback_t callback, void* user_data)
 {
 	list<TimerItem*>::iterator it;
@@ -152,16 +154,19 @@ void CEventDispatch::RemoveEvent(SOCKET fd, uint8_t socket_event)
 {
 	CAutoLock func_lock(&m_lock);
 
+	/* 读socket */
 	if ((socket_event & SOCKET_READ) != 0)
 	{
 		FD_CLR(fd, &m_read_set);
 	}
 
+	/* 写socket */
 	if ((socket_event & SOCKET_WRITE) != 0)
 	{
 		FD_CLR(fd, &m_write_set);
 	}
 
+	/* 异常socket */
 	if ((socket_event & SOCKET_EXCEP) != 0)
 	{
 		FD_CLR(fd, &m_excep_set);
@@ -174,7 +179,7 @@ void CEventDispatch::StartDispatch(uint32_t wait_timeout)
 	fd_set read_set, write_set, excep_set;
 	timeval timeout;
 	timeout.tv_sec = 0;
-	timeout.tv_usec = wait_timeout * 1000;	// 10 millisecond
+	timeout.tv_usec = wait_timeout * 1000;	// wait_timeout毫秒
 
     if(running)
         return;
@@ -241,7 +246,7 @@ void CEventDispatch::StartDispatch(uint32_t wait_timeout)
 			}
 		}
 
-		/* 接收到异常事件 */
+		/* 接收到异常事件,直接退出 */
 		for (u_int i = 0; i < excep_set.fd_count; i++)
 		{
 			//log("select return exception count=%d\n", excep_set.fd_count);
@@ -259,6 +264,7 @@ void CEventDispatch::StartDispatch(uint32_t wait_timeout)
 
 void CEventDispatch::StopDispatch()
 {
+	/* 这里不需要加锁,无非就是多跑一个循环 */
     running = false;
 }
 

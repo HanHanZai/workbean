@@ -28,6 +28,7 @@ void closeall(int fd)
  * so the caller is responsible for things like the umask, etc.
  */
 
+/* 1,0,1 */
 int daemon(int nochdir, int noclose, int asroot)
 {
     switch (fork())

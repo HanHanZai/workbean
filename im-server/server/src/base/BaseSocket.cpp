@@ -42,6 +42,7 @@ CBaseSocket::~CBaseSocket()
 	//log("CBaseSocket::~CBaseSocket, socket=%d\n", m_socket);
 }
 
+/* 监听socket */
 int CBaseSocket::Listen(const char* server_ip, uint16_t port, callback_t callback, void* callback_data)
 {
 	m_local_ip = server_ip;
@@ -56,8 +57,8 @@ int CBaseSocket::Listen(const char* server_ip, uint16_t port, callback_t callbac
 		return NETLIB_ERROR;
 	}
 
-	_SetReuseAddr(m_socket);
-	_SetNonblock(m_socket);
+	_SetReuseAddr(m_socket); //设置可重复使用,不需要等待几秒就可以重新使用
+	_SetNonblock(m_socket); //设置非阻塞操作
 
 	sockaddr_in serv_addr;
 	_SetAddr(server_ip, port, &serv_addr);
@@ -81,7 +82,8 @@ int CBaseSocket::Listen(const char* server_ip, uint16_t port, callback_t callbac
 
 	log("CBaseSocket::Listen on %s:%d", server_ip, port);
 
-	AddBaseSocket(this);
+	AddBaseSocket(this); 
+	/* 等待连接或者读取数据 */
 	CEventDispatch::Instance()->AddEvent(m_socket, SOCKET_READ | SOCKET_EXCEP);
 	return NETLIB_OK;
 }
@@ -115,6 +117,7 @@ net_handle_t CBaseSocket::Connect(const char* server_ip, uint16_t port, callback
 	}
 	m_state = SOCKET_STATE_CONNECTING;
 	AddBaseSocket(this);
+	/* 作为客户端可以接收所有的socket状态 */
 	CEventDispatch::Instance()->AddEvent(m_socket, SOCKET_ALL);
 	
 	return (net_handle_t)m_socket;
@@ -132,6 +135,7 @@ int CBaseSocket::Send(void* buf, int len)
 		if (_IsBlock(err_code))
 		{
 #if ((defined _WIN32) || (defined __APPLE__))
+			/* 给socket对象绑定对应写的io Socket对象 */
 			CEventDispatch::Instance()->AddEvent(m_socket, SOCKET_WRITE);
 #endif
 			ret = 0;
@@ -163,6 +167,7 @@ int CBaseSocket::Close()
 
 void CBaseSocket::OnRead()
 {
+	/* 当前属于第一次监听状态,那么就先完成当前连接 */
 	if (m_state == SOCKET_STATE_LISTENING)
 	{
 		_AcceptNewSocket();
@@ -172,10 +177,12 @@ void CBaseSocket::OnRead()
 		u_long avail = 0;
 		if ( (ioctlsocket(m_socket, FIONREAD, &avail) == SOCKET_ERROR) || (avail == 0) )
 		{
+			/* 遇到问题数据信息,就直接执行退出命令 */
 			m_callback(m_callback_data, NETLIB_MSG_CLOSE, (net_handle_t)m_socket, NULL);
 		}
 		else
 		{
+			/* 读取到了数据就直接读取 */
 			m_callback(m_callback_data, NETLIB_MSG_READ, (net_handle_t)m_socket, NULL);
 		}
 	}
@@ -316,12 +323,14 @@ void CBaseSocket::_SetAddr(const char* ip, const uint16_t port, sockaddr_in* pAd
 	}
 }
 
+/* 具体的会话socket对象 */
 void CBaseSocket::_AcceptNewSocket()
 {
 	SOCKET fd = 0;
 	sockaddr_in peer_addr;
 	socklen_t addr_len = sizeof(sockaddr_in);
 	char ip_str[64];
+	/* 新的连接对象,保存对应的会话监听 */
 	while ( (fd = accept(m_socket, (sockaddr*)&peer_addr, &addr_len)) != INVALID_SOCKET )
 	{
 		CBaseSocket* pSocket = new CBaseSocket();
@@ -332,14 +341,14 @@ void CBaseSocket::_AcceptNewSocket()
 
 		log("AcceptNewSocket, socket=%d from %s:%d\n", fd, ip_str, port);
 
-		pSocket->SetSocket(fd);
-		pSocket->SetCallback(m_callback);
-		pSocket->SetCallbackData(m_callback_data);
-		pSocket->SetState(SOCKET_STATE_CONNECTED);
+		pSocket->SetSocket(fd); /* 设置socket对象 */
+		pSocket->SetCallback(m_callback); /* 设置socket对象回调函数 */
+		pSocket->SetCallbackData(m_callback_data); /* 设置socket对象回调数据 */
+		pSocket->SetState(SOCKET_STATE_CONNECTED); /* 设置当前连接的状态为已连接 */
 		pSocket->SetRemoteIP(ip_str);
 		pSocket->SetRemotePort(port);
 
-		_SetNoDelay(fd); /* 会话socket不延迟 */
+		_SetNoDelay(fd); /* 会话socket不延迟,不累积数据,直接进行发送 */
 		_SetNonblock(fd); /* 会话socket不阻塞 */
 		AddBaseSocket(pSocket); /* 将对应的socket丢入列表中 */
 		/* 添加事件，读和异常事件 */

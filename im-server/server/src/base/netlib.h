@@ -25,18 +25,10 @@ int netlib_init();
 int netlib_destroy();
 
 /* 开始监听 */
-int netlib_listen(	
-		const char*	server_ip, 
-		uint16_t	port,
-		callback_t	callback,
-		void*		callback_data);
+int netlib_listen(const char* server_ip, uint16_t port,callback_t callback,void* callback_data);
 
 /* 网络连接 */
-net_handle_t netlib_connect(
-		const char*	server_ip,
-		uint16_t	port,
-		callback_t	callback,
-		void*		callback_data);
+net_handle_t netlib_connect(const char*	server_ip,uint16_t port,callback_t callback,void* callback_data);
 
 /* 消息发送 */
 int netlib_send(net_handle_t handle, void* buf, int len);

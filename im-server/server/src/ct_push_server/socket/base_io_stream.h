@@ -40,10 +40,10 @@ private:
 typedef enum en_socktype
 {
 	SOCK_NONE_TYPE = 0,
-	SOCK_TCP_SERVER,
-	SOCK_TCP_SESSION, 
-	SOCK_TCP_CLIENT,
-	SOCK_UDP_SESSION
+	SOCK_TCP_SERVER, /* TCP服务器 */
+	SOCK_TCP_SESSION, /* TCP会话 */
+	SOCK_TCP_CLIENT,  /* TCP客户端 */
+ 	SOCK_UDP_SESSION /* UDP会话 */
 }EN_SOCKTYPE;
 
 class CBaseIOStream
@@ -57,28 +57,35 @@ public:
 	virtual void SetSocket(S_SOCKET nSock) {m_socket = nSock; }
 	S_SOCKET GetSocket() { return m_socket; }
 	uint32_t GetSocketID() { return m_sock_id; }
+	/* 设置检查连接 */
 	void SetCheckConnect(bool bCheck) { m_bCheckTcpConnected = bCheck; }
 	BOOL CheckConnect() { return m_bCheckTcpConnected; }
 
     const char* GetLocalIP() {
         int32_t nPort = 0;
+		/* 获取本地ip */
         S_GetSockName(m_socket, m_szIP, &nPort);
         return m_szIP;
 
 	}
+
 	uint32_t GetLocalPort() {
         int32_t nPort = 0;
+		/* 获取本地端口 */
         S_GetSockName(m_socket, m_szIP, &nPort);
 		return nPort;
 	}
 
     virtual const char* GetRemoteIP() {
         int32_t nPort = 0;
+		/* 获取远端ip */
         S_GetPeerName(m_socket, m_szIP, &nPort);
         return m_szIP;
 	}
+
 	virtual int32_t GetRemotePort(){
         int32_t nPort = 0;
+		/* 获取远端端口 */
         S_GetPeerName(m_socket, m_szIP, &nPort);
 		return nPort;
 	}

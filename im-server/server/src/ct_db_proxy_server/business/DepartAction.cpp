@@ -46,7 +46,6 @@ namespace DB_PROXY{
             pPduRes->SetServiceId(IM::BaseDefine::SID_BUDDY_LIST);
             pPduRes->SetCommandId(IM::BaseDefine::CID_BUDDY_LIST_DEPARTMENT_RESPONSE);
             CProxyConn::AddResponsePdu(conn_uuid, pPduRes);
-            
         }
         else
         {

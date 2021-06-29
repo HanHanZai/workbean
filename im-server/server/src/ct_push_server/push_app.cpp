@@ -89,13 +89,16 @@ BOOL CPushApp::Start()
             PUSH_SERVER_ERROR("push app config parameter: sand_box has invaid value: %u.", nsand_box)
             return FALSE;
         }
+
+        /* 推送客户端 */
         apns_client_ptr pAPNSClient(new CAPNSClient(m_io));
-        pAPNSClient->SetCertPath(cert_path);
-        pAPNSClient->SetKeyPath(key_path);
-        pAPNSClient->SetKeyPassword(key_password);
-        pAPNSClient->SetSandBox((BOOL)atoi(sand_box));
+        pAPNSClient->SetCertPath(cert_path); /* 证书地址 */
+        pAPNSClient->SetKeyPath(key_path); /* 密钥地址 */
+        pAPNSClient->SetKeyPassword(key_password); /* 对应密码 */
+        pAPNSClient->SetSandBox((BOOL)atoi(sand_box)); /* 设置沙盒  */
         CSessionManager::GetInstance()->SetAPNSClient(pAPNSClient);
         
+        /* 推送服务器 */
         push_server_ptr pPushServer(new CPushServer(m_io));
         pPushServer->SetListenIP(listen_ip);
         pPushServer->SetPort(atoi(str_listen_port));

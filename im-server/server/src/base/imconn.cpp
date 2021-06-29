@@ -40,15 +40,19 @@ void imconn_callback(void* callback_data, uint8_t msg, uint32_t handle, void* pP
 
 	switch (msg)
 	{
-	case NETLIB_MSG_CONFIRM:
+	/* 连接确认 */
+	case NETLIB_MSG_CONFIRM: 
 		pConn->OnConfirm();
 		break;
+	/* 接收指定动态大小的数据包 */
 	case NETLIB_MSG_READ:
-		pConn->OnRead(); /* 接收指定动态大小的数据包 */
+		pConn->OnRead(); 
 		break;
+	/* 写入指定大小的数据信息 */
 	case NETLIB_MSG_WRITE:
 		pConn->OnWrite();
 		break;
+	/* 关闭连接 */
 	case NETLIB_MSG_CLOSE:
 		pConn->OnClose();
 		break;
@@ -126,6 +130,7 @@ int CImConn::Send(void* data, int len)
 
 void CImConn::OnRead()
 {
+	/* 将所有的数据全部都发送完成 */
 	for (;;)
 	{
 		uint32_t free_buf_len = m_in_buf.GetAllocSize() - m_in_buf.GetWriteOffset();
