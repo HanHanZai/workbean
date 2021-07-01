@@ -64,7 +64,7 @@ private:
 
 class CachePool {
 public:
-	CachePool(const char* pool_name, const char* server_ip, int server_port, int db_num, int max_conn_cnt);
+	CachePool(const char* pool_name, const char* server_ip,const char* password, int server_port, int db_num, int max_conn_cnt);
 	virtual ~CachePool();
 
 	int Init();
@@ -74,11 +74,13 @@ public:
 
 	const char* GetPoolName() { return m_pool_name.c_str(); }
 	const char* GetServerIP() { return m_server_ip.c_str(); }
+	const char* GetPassword() { return m_password.c_str();  }
 	int GetServerPort() { return m_server_port; }
 	int GetDBNum() { return m_db_num; }
 private:
 	string 		m_pool_name;
 	string		m_server_ip;
+	string      m_password;
 	int			m_server_port;
 	int			m_db_num;
 
