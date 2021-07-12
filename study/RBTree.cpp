@@ -1,27 +1,31 @@
 #include"RBTree.h"
 template<class T>
-inline RBTree<T>::RBTree()
+inline RBTree<T>::RBTree():pRoot(NULL)
 {
 }
 
 template<class T>
 inline RBTree<T>::~RBTree()
 {
+    destroy();
 }
 
 template<class T>
 inline void RBTree<T>::preOrder()
 {
+    preOrder(pRoot);
 }
 
 template<class T>
-inline void RBTree<T>::midOrder()
+inline void RBTree<T>::inOrder()
 {
+    preOrder(pRoot);
 }
 
 template<class T>
 inline void RBTree<T>::postOrder()
 {
+    postOrder(pRoot);
 }
 
 template<class T>
@@ -93,16 +97,31 @@ inline void RBTree<T>::print()
 template<class T>
 inline void RBTree<T>::preOrder(RBNode<T>* x) const
 {
+    if (x!=NULL){
+        cout<<x->key<<endl;
+        preOrder(x->left);
+        preOrder(x->right);
+    }
 }
 
 template<class T>
 inline void RBTree<T>::inOrder(RBNode<T>* x) const
 {
+    if(x!=NULL){
+        inOrder(x->left);
+        cout<<x->key<<endl;
+        inOrder(x->right);
+    }
 }
 
 template<class T>
 inline void RBTree<T>::postOrder(RBNode<T>* x) const
 {
+    if(x!=NULL){
+        postOrder(x->left);
+        postOrder(x->right);
+        cout<<x->key<<endl;
+    }
 }
 
 template<class T>
@@ -120,13 +139,25 @@ inline RBNode<T>* RBTree<T>::iterativeSearch(RBNode<T>* x, T key) const
 template<class T>
 inline RBNode<T>* RBTree<T>::minimum(RBNode<T>* x)
 {
-    return NULL;
+    if (x == NULL){
+        return NULL;
+    }
+    while(x->left!=NULL){
+        x = x->left;
+    }
+    return x;
 }
 
 template<class T>
 inline RBNode<T>* RBTree<T>::maximum(RBNode<T>* x)
 {
-    return NULL;
+    if (x == NULL){
+        return NULL;
+    }
+    while(x->right!=NULL){
+        x = x->right;
+    }
+    return x;
 }
 
 template<class T>

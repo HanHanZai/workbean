@@ -37,7 +37,7 @@ public:
     void preOrder();
 
     /* 中序遍历 */
-    void midOrder();
+    void inOrder();
 
     /* 后序遍历 */
     void postOrder();
