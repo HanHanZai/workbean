@@ -57,11 +57,12 @@ uint64_t get_tick_count()
 	LARGE_INTEGER liCounter; 
 	LARGE_INTEGER liCurrent;
 
+    /* 返回硬件支持的高精度计数器频率，返回硬件支持的高精度计数器的频率，返回值非零返回每秒执行的次数，0不支持 */
 	if (!QueryPerformanceFrequency(&liCounter))
 		return GetTickCount();
 
 	QueryPerformanceCounter(&liCurrent);
-	return (uint64_t)(liCurrent.QuadPart * 1000 / liCounter.QuadPart);
+	return (uint64_t)(liCurrent.QuadPart * 1000 / liCounter.QuadPart); /* 返回毫秒级别的计数器 */
 #else
 	struct timeval tval;
 	uint64_t ret_tick;
@@ -86,6 +87,7 @@ CStrExplode::CStrExplode(char* str, char seperator)
 {
 	m_item_cnt = 1;
 	char* pos = str;
+    /* 去除所有无效的前置符号 */
 	while (*pos) {
 		if (*pos == seperator) {
 			m_item_cnt++;
@@ -130,6 +132,7 @@ CStrExplode::~CStrExplode()
 	delete [] m_item_list;
 }
 
+/* 替换指定的字符 */
 char* replaceStr(char* pSrc, char oldChar, char newChar)
 {
     if(NULL == pSrc)
@@ -174,6 +177,7 @@ void replace_mark(string& str, string& new_value, uint32_t& begin_pos)
     begin_pos = pos + prime_new_value.size();
 }
 
+//why not use to_string()
 void replace_mark(string& str, uint32_t new_value, uint32_t& begin_pos)
 {
     stringstream ss;
@@ -206,6 +210,7 @@ void writePid()
     fclose(f);
 }
 
+/* 转化成16进制 */
 inline unsigned char toHex(const unsigned char &x)
 {
     return x > 9 ? x -10 + 'A': x + '0';
@@ -216,6 +221,7 @@ inline unsigned char fromHex(const unsigned char &x)
     return isdigit(x) ? x-'0' : x-'A'+10;
 }
 
+/* base64编码 */
 string URLEncode(const string &sIn)
 {
     string sOut;
@@ -223,14 +229,11 @@ string URLEncode(const string &sIn)
     {
         unsigned char buf[4];
         memset( buf, 0, 4 );
+        /* 字符和数字组成 */
         if( isalnum( (unsigned char)sIn[ix] ) )
         {
             buf[0] = sIn[ix];
         }
-        //else if ( isspace( (unsigned char)sIn[ix] ) ) //貌似把空格编码成%20或者+都可以
-        //{
-        //    buf[0] = '+';
-        //}
         else
         {
             buf[0] = '%';
@@ -242,6 +245,7 @@ string URLEncode(const string &sIn)
     return sOut;
 }
 
+/* base64解码 */
 string URLDecode(const string &sIn)
 {
     string sOut;
@@ -267,7 +271,7 @@ string URLDecode(const string &sIn)
     return sOut;
 }
 
-
+/* 获取文件大小 */
 int64_t get_file_size(const char *path)
 {
     int64_t filesize = -1;
@@ -280,7 +284,8 @@ int64_t get_file_size(const char *path)
     return filesize;
 }
 
-const char*  memfind(const char *src_str,size_t src_len, const char *sub_str, size_t sub_len, bool flag)
+/* 查找指定字符串，并返回匹配的字符，flag标记位为前向和逆向 */
+const char* memfind(const char *src_str,size_t src_len, const char *sub_str, size_t sub_len, bool flag)
 {
     if(NULL == src_str || NULL == sub_str || src_len <= 0)
     {

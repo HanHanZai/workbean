@@ -40,11 +40,11 @@ public:
 	void AddRef();
 	void ReleaseRef();
 private:
-	int				m_refCount;
+	int	m_refCount;
 	CLock*	m_lock;
 };
 
-#define LOG_MODULE_IM         "IM"
+#define LOG_MODULE_IM "IM"
 
 
 extern CSLog g_imlog;
