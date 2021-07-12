@@ -11,15 +11,15 @@ enum RBColor {RED,BLACK};
 template<class T>
 class RBNode {
 public:
-    /* ÑÕÉ« */
+    /* é¢œè‰² */
     RBColor color;
-    /* ¾ßÌåµÄÖµ */
+    /* å…·ä½“çš„å€¼ */
     T key;
-    /* ×ó×Ó½Úµã */
+    /* å·¦å­èŠ‚ç‚¹ */
     RBNode* left;
-    /* ÓÒ×Ó½Úµã */
+    /* å³å­èŠ‚ç‚¹ */
     RBNode* right;
-    /* ¸¸½Úµã */
+    /* çˆ¶èŠ‚ç‚¹ */
     RBNode* parent;
 
     RBNode(T value, RBColor c, RBNode* p, RBNode* l, RBNode* r) :color(c), key(value), parent(p), left(l), right(r) {};
@@ -33,88 +33,88 @@ public:
     RBTree();
     ~RBTree();
 
-    /* Ç°Ğò±éÀú */
+    /* å‰åºéå† */
     void preOrder();
 
-    /* ÖĞĞò±éÀú */
+    /* ä¸­åºéå† */
     void midOrder();
 
-    /* ºóĞò±éÀú */
+    /* ååºéå† */
     void postOrder();
 
-    /* µİ¹éÊµÏÖ²éÕÒ"ºìºÚÊ÷"ÖĞ¼üÖµÎªkeyµÄ½Úµã */
+    /* é€’å½’å®ç°æŸ¥æ‰¾"çº¢é»‘æ ‘"ä¸­é”®å€¼ä¸ºkeyçš„èŠ‚ç‚¹ */
     RBNode<T>* search(T key);
 
-    /* ·Çµİ¹éÊµÏÖ²éÕÒ"ºìºÚÊ÷"ÖĞ¼üÖµÎªkeyµÄ½Úµã */
+    /* éé€’å½’å®ç°æŸ¥æ‰¾"çº¢é»‘æ ‘"ä¸­é”®å€¼ä¸ºkeyçš„èŠ‚ç‚¹ */
     RBNode<T>* iterativeSearch(T key);
 
-    /* »ñÈ¡×îĞ¡µÄ½Úµã£¬·µ»Ø×îĞ¡½ÚµãµÄ¼üÖµ */
+    /* è·å–æœ€å°çš„èŠ‚ç‚¹ï¼Œè¿”å›æœ€å°èŠ‚ç‚¹çš„é”®å€¼ */
     T minimum();
 
-    /* »ñÈ¡×î´óµÄ½Úµã£¬·µ»Ø×î´óµÄ½ÚµãµÄ¼üÖµ */
+    /* è·å–æœ€å¤§çš„èŠ‚ç‚¹ï¼Œè¿”å›æœ€å¤§çš„èŠ‚ç‚¹çš„é”®å€¼ */
     T maximum();
 
-    /* ÕÒ½Úµã(x)µÄºóĞø½Úµã£¬¼´´óÓÚµÈÓÚ¸Ã½ÚµãµÄµÚÒ»¸ö½Úµã */
+    /* æ‰¾èŠ‚ç‚¹(x)çš„åç»­èŠ‚ç‚¹ï¼Œå³å¤§äºç­‰äºè¯¥èŠ‚ç‚¹çš„ç¬¬ä¸€ä¸ªèŠ‚ç‚¹ */
     RBNode<T>* successor(RBNode<T>* x);
 
-    /* ÕÒ½Úµã(x)µÄÇ°µ¼½Úµã£¬¼´Ğ¡ÓÚµÈÓÚ¸Ã½ÚµãµÄµÚÒ»¸ö½Úµã */
+    /* æ‰¾èŠ‚ç‚¹(x)çš„å‰å¯¼èŠ‚ç‚¹ï¼Œå³å°äºç­‰äºè¯¥èŠ‚ç‚¹çš„ç¬¬ä¸€ä¸ªèŠ‚ç‚¹ */
     RBNode<T>* predecessor(RBNode<T>* x);
 
-    /* ½«½Úµã(KeyÎª¼üÖµ)²åÈëµ½ºìºÚÊ÷ÖĞ */
+    /* å°†èŠ‚ç‚¹(Keyä¸ºé”®å€¼)æ’å…¥åˆ°çº¢é»‘æ ‘ä¸­ */
     void insert(T key);
 
-    /* É¾³ıÖ¸¶¨¼ükeyµÄÖµ */
+    /* åˆ é™¤æŒ‡å®šé”®keyçš„å€¼ */
     void remove(T key);
 
-    /* Ïú»ÙºìºÚÊ÷ */
+    /* é”€æ¯çº¢é»‘æ ‘ */
     void destroy();
 
-    /* ´òÓ¡ºìºÚÊ÷ */
+    /* æ‰“å°çº¢é»‘æ ‘ */
     void print();
 
 private:
-    /* Ç°Ğò±éÀúºìºÚÊ÷ */
+    /* å‰åºéå†çº¢é»‘æ ‘ */
     void preOrder(RBNode<T>* x)const;
 
-    /* ÖĞĞò±éÀúºìºÚÊ÷ */
+    /* ä¸­åºéå†çº¢é»‘æ ‘ */
     void inOrder(RBNode<T>* x)const;
 
-    /* ºóĞò±éÀúºìºÚÊ÷ */
+    /* ååºéå†çº¢é»‘æ ‘ */
     void postOrder(RBNode<T>* x)const;
 
-    /* µİ¹éÊµÏÖ ²éÕÒºìºÚÊ÷xÖĞ¼üÖµÎªkeyµÄ½Úµã */
+    /* é€’å½’å®ç° æŸ¥æ‰¾çº¢é»‘æ ‘xä¸­é”®å€¼ä¸ºkeyçš„èŠ‚ç‚¹ */
     RBNode<T>* search(RBNode<T>* x, T key)const;
 
-    /* ·Çµİ¹éÊµÏÖ£¬²éÕÒºìºÚÊ÷xÖĞ¼üÖµÎªkeyµÄ½Úµã */
+    /* éé€’å½’å®ç°ï¼ŒæŸ¥æ‰¾çº¢é»‘æ ‘xä¸­é”®å€¼ä¸ºkeyçš„èŠ‚ç‚¹ */
     RBNode<T>* iterativeSearch(RBNode<T>* x, T key)const;
 
-    /* ²éÕÒ×îĞ¡µÄ½Úµã */
+    /* æŸ¥æ‰¾æœ€å°çš„èŠ‚ç‚¹ */
     RBNode<T>* minimum(RBNode<T>* x);
 
-    /* ²éÕÒ×î´óµÄ½Úµã */
+    /* æŸ¥æ‰¾æœ€å¤§çš„èŠ‚ç‚¹ */
     RBNode<T>* maximum(RBNode<T>* x);
 
-    /* ×óĞı×ª */
+    /* å·¦æ—‹è½¬ */
     void leftRotate(RBNode<T>* &root, RBNode<T>* x);
 
-    /* ÓÒĞı×ª */
+    /* å³æ—‹è½¬ */
     void rightRotate(RBNode<T>* &root, RBNode<T>* y);
 
-    /* ²åÈëº¯Êı */
+    /* æ’å…¥å‡½æ•° */
     void insert(RBNode<T>* &root, RBNode<T>* node);
 
-    /* ²åÈëĞŞÕıº¯Êı */
+    /* æ’å…¥ä¿®æ­£å‡½æ•° */
     void insertFixUp(RBNode<T>* &root, RBNode<T>* node);
 
-    /* É¾³ıº¯Êı */
+    /* åˆ é™¤å‡½æ•° */
     void remove(RBNode<T>* &root, RBNode<T>* node);
 
-    /* É¾³ıĞŞÕıº¯Êı */
+    /* åˆ é™¤ä¿®æ­£å‡½æ•° */
     void removeFixUp(RBNode<T>* &root, RBNode<T>* node,RBNode<T>* parent);
 
-    /* Ïú»ÙºìºÚÊ÷ */
+    /* é”€æ¯çº¢é»‘æ ‘ */
     void destroy(RBNode<T>* &tree);
 
-    /* ´òÓ¡ºìºÚÊ÷ */
+    /* æ‰“å°çº¢é»‘æ ‘ */
     void print(RBNode<T>* tree, T key, int direction);
 };
