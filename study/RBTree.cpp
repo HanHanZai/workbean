@@ -31,37 +31,62 @@ inline void RBTree<T>::postOrder()
 template<class T>
 inline RBNode<T>* RBTree<T>::search(T key)
 {
-    return NULL;
+    return search(pRoot,key);
 }
 
 template<class T>
 inline RBNode<T>* RBTree<T>::iterativeSearch(T key)
 {
-    return NULL;
+    return iterativeSearch(pRoot,key);
 }
 
 template<class T>
 inline T RBTree<T>::minimum()
 {
-    return T();
+    return minimum(pRoot);
 }
 
 template<class T>
 inline T RBTree<T>::maximum()
 {
-    return T();
+    return maximum(pRoot);
 }
 
+/* 找到x节点的后继节点 */
 template<class T>
 inline RBNode<T>* RBTree<T>::successor(RBNode<T>* x)
 {
-    return NULL;
+    /* 如果存在右节点，那么返回右节点中最小的那个 */
+    if(x->right){
+        return minimum(x->right);
+    }
+    /* 情况1：当前节点为左节点，那么此时它的下一个节点就是父节点 */
+    /* 情况2：当前节点不为父节点，那么就找到第一个大于它的祖父节点 */
+    RBNode<T>* y = x->parent;
+    while((y!=NULL)&&(x == y->right)){
+        x = y;
+        y = y->parent;
+    }
+    return y;
 }
 
+/* 找到x节点的前导节点，即找到第一个小于当前节点的值 */
 template<class T>
 inline RBNode<T>* RBTree<T>::predecessor(RBNode<T>* x)
 {
-    return NULL;
+    /* 如果存在左节点，返回左节点中最大的那个值 */
+    if(x->left){
+        return maximum(x->left);
+    }
+
+    /* 情况1：当前节点为右节点，那么此时父节点就是小于它的第一个节点 */
+    /* 情况2：当前节点为左节点，那么通过不断回溯，找到第一个符合条件的祖父节点 */
+    RBNode<T>* y = x->parent;
+    while((y!=NULL)&&(x == y->left)){
+        x = y;
+        y = y->parent;
+    }
+    return y;
 }
 
 template<class T>
@@ -87,11 +112,15 @@ inline void RBTree<T>::remove(T key)
 template<class T>
 inline void RBTree<T>::destroy()
 {
+    destroy(pRoot);
 }
 
 template<class T>
 inline void RBTree<T>::print()
 {
+    if (pRoot){
+        print(pRoot,pRoot->key,0);
+    }
 }
 
 template<class T>
@@ -127,13 +156,29 @@ inline void RBTree<T>::postOrder(RBNode<T>* x) const
 template<class T>
 inline RBNode<T>* RBTree<T>::search(RBNode<T>* x, T key) const
 {
+    if (x == NULL || x->key == key){
+        return x;
+    }
+
+    if(key < x->key){
+        return search(x->left,key);
+    }else{
+        return search(x->right,key);
+    }
     return NULL;
 }
 
 template<class T>
 inline RBNode<T>* RBTree<T>::iterativeSearch(RBNode<T>* x, T key) const
 {
-    return NULL;
+    while(x && x->key!=key){
+        if(x->key < key){
+            x = x->right;
+        }else{
+            x = x->left;
+        }
+    }
+    return x;
 }
 
 template<class T>
@@ -172,24 +217,24 @@ inline void RBTree<T>::leftRotate(RBNode<T>*& root, RBNode<T>* x)
         y->left->parent = x;
     }
 
-/* 将x的父亲设置为y的父亲，x的父亲设置为y */
-y->parent = x->parent;
-if (x->parent == NULL) {
-    root = y;
-}
-else {
-    if (x->parent->left == x) {
-        x->parent->left = y;
+    /* 将x的父亲设置为y的父亲，x的父亲设置为y */
+    y->parent = x->parent;
+    if (x->parent == NULL) {
+        root = y;
     }
     else {
-        x->parent->right = y;
+        if (x->parent->left == x) {
+            x->parent->left = y;
+        }
+        else {
+            x->parent->right = y;
+        }
     }
-}
 
-/* 将x设置为y的孩子 */
-y->left = x;
-/* 将y的父节点设置为y */
-x->parent = y;
+    /* 将x设置为y的孩子 */
+    y->left = x;
+    /* 将y的父节点设置为y */
+    x->parent = y;
 }
 
 template<class T>
@@ -522,9 +567,29 @@ inline void RBTree<T>::removeFixUp(RBNode<T>*& root, RBNode<T>* node, RBNode<T>*
 template<class T>
 inline void RBTree<T>::destroy(RBNode<T>*& tree)
 {
+    if (tree == NULL){
+        return;
+    }
+
+    if (tree->left!=NULL){
+        return destroy(tree->left);
+    }else if(tree->right!=NULL){
+        return destroy(tree->right);
+    }
+    delete tree;
+    tree = NULL;
 }
 
 template<class T>
 inline void RBTree<T>::print(RBNode<T>* tree, T key, int direction)
 {
+    if (tree!=NULL){
+        if(direction == 0)
+            cout<<setw(2)<<tree->key<<"(B) is root"<<endl;
+        else
+            cout << setw(2) << tree->key <<  (rb_is_red(tree)?"(R)":"(B)") << " is " << setw(2) << key << "'s "  << setw(12) << (direction==1?"right child" : "left child") << endl;
+        
+        print(tree->left,tree->key,1);
+        print(tree->right,tree->key,-1);
+    }
 }
