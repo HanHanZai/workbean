@@ -78,5 +78,5 @@ public:
 
     void MakeMoney(){
         CNewCorp::MakeMoney();
-    }
+    };
 };
