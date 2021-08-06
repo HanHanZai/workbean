@@ -32,6 +32,7 @@ public:
     };
     void NotifyObservable(string context){
         for(auto it:m_observerList){
+            /* 通知各个观察者 */
             it->Update(context);
         }
     };
@@ -89,3 +90,5 @@ public:
 private:
     void Cry(string report);
 };
+
+/* 如果监听者监听到被观察者触发了某个事件，根据观察对象的不同做出对应的处理 */

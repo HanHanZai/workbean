@@ -1,5 +1,6 @@
 /* Decorator装饰器模式 */
 /* 装饰模式，动态的给一个对象额外添加一些额外的职责，增加功能来说，Decorator模式相对于子类更为灵活 */
+/* 子类中新增额外的一些需求接口 */
 /* 单例抽象类 */
 #include<string>
 class ISchoolReport
@@ -13,7 +14,7 @@ public:
 };
 
 /* 四年级的成绩单 */
-class CFouthGradeSchoolReport{
+class CFouthGradeSchoolReport:public ISchoolReport{
 public:
     CFouthGradeSchoolReport(void);
     ~CFouthGradeSchoolReport(void);
